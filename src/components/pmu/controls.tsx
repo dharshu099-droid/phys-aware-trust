@@ -134,6 +134,45 @@ function NumField({
 }
 
 export function AdvancedSettings() {
+  return <AdvancedSettingsBody />;
+}
+
+export function NoiseControl() {
+  const { cfg, setCfg } = usePmu();
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-4">
+        <Slider
+          value={[cfg.noisePct]}
+          min={0}
+          max={20}
+          step={0.5}
+          onValueChange={([v]) => setCfg({ noisePct: v ?? 0 })}
+        />
+        <span className="mono-num w-20 text-xs text-muted-foreground">{cfg.noisePct.toFixed(1)} %</span>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {[0, 1, 2, 5, 10].map((n) => (
+          <Button
+            key={n}
+            size="sm"
+            variant={cfg.noisePct === n ? "default" : "outline"}
+            className="h-7 px-2 text-[11px]"
+            onClick={() => setCfg({ noisePct: n })}
+          >
+            {n}%
+          </Button>
+        ))}
+      </div>
+      <p className="text-[11px] text-muted-foreground">
+        Noise standard deviation is a percentage of each channel's own standard deviation over the record, added
+        independently per sample with a fixed seed so results are reproducible.
+      </p>
+    </div>
+  );
+}
+
+function AdvancedSettingsBody() {
   const { cfg, setCfg } = usePmu();
   return (
     <div className="space-y-5">
