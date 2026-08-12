@@ -38,7 +38,7 @@ function EvaluationPage() {
 
   const labelled = rows.filter((x) => x.e.groundTruth);
   const decided = labelled.filter((x) => x.r.rel.decision !== "Uncertain");
-  const correct = decided.filter((x) => x.r.rel.decision === x.e.groundTruth).length;
+  const correct = decided.filter((x) => x.r.rel.decision.toLowerCase() === x.e.groundTruth).length;
   const coverage = labelled.length ? decided.length / labelled.length : null;
   const selectiveAcc = decided.length ? correct / decided.length : null;
 

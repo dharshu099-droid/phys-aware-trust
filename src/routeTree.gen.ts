@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AiModelRouteImport } from './routes/ai-model'
 import { Route as ArchitectureRouteImport } from './routes/architecture'
 import { Route as EarlyPredictionRouteImport } from './routes/early-prediction'
+import { Route as EvaluationRouteImport } from './routes/evaluation'
 import { Route as PhysicsConsistencyRouteImport } from './routes/physics-consistency'
 import { Route as PmuEventDataRouteImport } from './routes/pmu-event-data'
 import { Route as ReliabilityRouteImport } from './routes/reliability'
@@ -37,6 +38,11 @@ const ArchitectureRoute = ArchitectureRouteImport.update({
 const EarlyPredictionRoute = EarlyPredictionRouteImport.update({
   id: '/early-prediction',
   path: '/early-prediction',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EvaluationRoute = EvaluationRouteImport.update({
+  id: '/evaluation',
+  path: '/evaluation',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PhysicsConsistencyRoute = PhysicsConsistencyRouteImport.update({
@@ -70,6 +76,7 @@ export interface FileRoutesByFullPath {
   '/ai-model': typeof AiModelRoute
   '/architecture': typeof ArchitectureRoute
   '/early-prediction': typeof EarlyPredictionRoute
+  '/evaluation': typeof EvaluationRoute
   '/physics-consistency': typeof PhysicsConsistencyRoute
   '/pmu-event-data': typeof PmuEventDataRoute
   '/reliability': typeof ReliabilityRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/ai-model': typeof AiModelRoute
   '/architecture': typeof ArchitectureRoute
   '/early-prediction': typeof EarlyPredictionRoute
+  '/evaluation': typeof EvaluationRoute
   '/physics-consistency': typeof PhysicsConsistencyRoute
   '/pmu-event-data': typeof PmuEventDataRoute
   '/reliability': typeof ReliabilityRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/ai-model': typeof AiModelRoute
   '/architecture': typeof ArchitectureRoute
   '/early-prediction': typeof EarlyPredictionRoute
+  '/evaluation': typeof EvaluationRoute
   '/physics-consistency': typeof PhysicsConsistencyRoute
   '/pmu-event-data': typeof PmuEventDataRoute
   '/reliability': typeof ReliabilityRoute
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
     | '/ai-model'
     | '/architecture'
     | '/early-prediction'
+    | '/evaluation'
     | '/physics-consistency'
     | '/pmu-event-data'
     | '/reliability'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/ai-model'
     | '/architecture'
     | '/early-prediction'
+    | '/evaluation'
     | '/physics-consistency'
     | '/pmu-event-data'
     | '/reliability'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/ai-model'
     | '/architecture'
     | '/early-prediction'
+    | '/evaluation'
     | '/physics-consistency'
     | '/pmu-event-data'
     | '/reliability'
@@ -140,6 +152,7 @@ export interface RootRouteChildren {
   AiModelRoute: typeof AiModelRoute
   ArchitectureRoute: typeof ArchitectureRoute
   EarlyPredictionRoute: typeof EarlyPredictionRoute
+  EvaluationRoute: typeof EvaluationRoute
   PhysicsConsistencyRoute: typeof PhysicsConsistencyRoute
   PmuEventDataRoute: typeof PmuEventDataRoute
   ReliabilityRoute: typeof ReliabilityRoute
@@ -175,6 +188,13 @@ declare module '@tanstack/react-router' {
       path: '/early-prediction'
       fullPath: '/early-prediction'
       preLoaderRoute: typeof EarlyPredictionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/evaluation': {
+      id: '/evaluation'
+      path: '/evaluation'
+      fullPath: '/evaluation'
+      preLoaderRoute: typeof EvaluationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/physics-consistency': {
@@ -220,6 +240,7 @@ const rootRouteChildren: RootRouteChildren = {
   AiModelRoute: AiModelRoute,
   ArchitectureRoute: ArchitectureRoute,
   EarlyPredictionRoute: EarlyPredictionRoute,
+  EvaluationRoute: EvaluationRoute,
   PhysicsConsistencyRoute: PhysicsConsistencyRoute,
   PmuEventDataRoute: PmuEventDataRoute,
   ReliabilityRoute: ReliabilityRoute,
