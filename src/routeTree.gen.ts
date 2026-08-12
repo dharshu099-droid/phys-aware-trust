@@ -10,33 +10,154 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AiModelRouteImport } from './routes/ai-model'
+import { Route as ArchitectureRouteImport } from './routes/architecture'
+import { Route as EarlyPredictionRouteImport } from './routes/early-prediction'
+import { Route as EvaluationRouteImport } from './routes/evaluation'
+import { Route as PhysicsConsistencyRouteImport } from './routes/physics-consistency'
+import { Route as PmuEventDataRouteImport } from './routes/pmu-event-data'
+import { Route as ReliabilityRouteImport } from './routes/reliability'
+import { Route as StressTestingRouteImport } from './routes/stress-testing'
+import { Route as UncertaintyRouteImport } from './routes/uncertainty'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AiModelRoute = AiModelRouteImport.update({
+  id: '/ai-model',
+  path: '/ai-model',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ArchitectureRoute = ArchitectureRouteImport.update({
+  id: '/architecture',
+  path: '/architecture',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EarlyPredictionRoute = EarlyPredictionRouteImport.update({
+  id: '/early-prediction',
+  path: '/early-prediction',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EvaluationRoute = EvaluationRouteImport.update({
+  id: '/evaluation',
+  path: '/evaluation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PhysicsConsistencyRoute = PhysicsConsistencyRouteImport.update({
+  id: '/physics-consistency',
+  path: '/physics-consistency',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PmuEventDataRoute = PmuEventDataRouteImport.update({
+  id: '/pmu-event-data',
+  path: '/pmu-event-data',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReliabilityRoute = ReliabilityRouteImport.update({
+  id: '/reliability',
+  path: '/reliability',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StressTestingRoute = StressTestingRouteImport.update({
+  id: '/stress-testing',
+  path: '/stress-testing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UncertaintyRoute = UncertaintyRouteImport.update({
+  id: '/uncertainty',
+  path: '/uncertainty',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ai-model': typeof AiModelRoute
+  '/architecture': typeof ArchitectureRoute
+  '/early-prediction': typeof EarlyPredictionRoute
+  '/evaluation': typeof EvaluationRoute
+  '/physics-consistency': typeof PhysicsConsistencyRoute
+  '/pmu-event-data': typeof PmuEventDataRoute
+  '/reliability': typeof ReliabilityRoute
+  '/stress-testing': typeof StressTestingRoute
+  '/uncertainty': typeof UncertaintyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ai-model': typeof AiModelRoute
+  '/architecture': typeof ArchitectureRoute
+  '/early-prediction': typeof EarlyPredictionRoute
+  '/evaluation': typeof EvaluationRoute
+  '/physics-consistency': typeof PhysicsConsistencyRoute
+  '/pmu-event-data': typeof PmuEventDataRoute
+  '/reliability': typeof ReliabilityRoute
+  '/stress-testing': typeof StressTestingRoute
+  '/uncertainty': typeof UncertaintyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/ai-model': typeof AiModelRoute
+  '/architecture': typeof ArchitectureRoute
+  '/early-prediction': typeof EarlyPredictionRoute
+  '/evaluation': typeof EvaluationRoute
+  '/physics-consistency': typeof PhysicsConsistencyRoute
+  '/pmu-event-data': typeof PmuEventDataRoute
+  '/reliability': typeof ReliabilityRoute
+  '/stress-testing': typeof StressTestingRoute
+  '/uncertainty': typeof UncertaintyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/ai-model'
+    | '/architecture'
+    | '/early-prediction'
+    | '/evaluation'
+    | '/physics-consistency'
+    | '/pmu-event-data'
+    | '/reliability'
+    | '/stress-testing'
+    | '/uncertainty'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/ai-model'
+    | '/architecture'
+    | '/early-prediction'
+    | '/evaluation'
+    | '/physics-consistency'
+    | '/pmu-event-data'
+    | '/reliability'
+    | '/stress-testing'
+    | '/uncertainty'
+  id:
+    | '__root__'
+    | '/'
+    | '/ai-model'
+    | '/architecture'
+    | '/early-prediction'
+    | '/evaluation'
+    | '/physics-consistency'
+    | '/pmu-event-data'
+    | '/reliability'
+    | '/stress-testing'
+    | '/uncertainty'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AiModelRoute: typeof AiModelRoute
+  ArchitectureRoute: typeof ArchitectureRoute
+  EarlyPredictionRoute: typeof EarlyPredictionRoute
+  EvaluationRoute: typeof EvaluationRoute
+  PhysicsConsistencyRoute: typeof PhysicsConsistencyRoute
+  PmuEventDataRoute: typeof PmuEventDataRoute
+  ReliabilityRoute: typeof ReliabilityRoute
+  StressTestingRoute: typeof StressTestingRoute
+  UncertaintyRoute: typeof UncertaintyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,22 +169,84 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ai-model': {
+      id: '/ai-model'
+      path: '/ai-model'
+      fullPath: '/ai-model'
+      preLoaderRoute: typeof AiModelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/architecture': {
+      id: '/architecture'
+      path: '/architecture'
+      fullPath: '/architecture'
+      preLoaderRoute: typeof ArchitectureRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/early-prediction': {
+      id: '/early-prediction'
+      path: '/early-prediction'
+      fullPath: '/early-prediction'
+      preLoaderRoute: typeof EarlyPredictionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/evaluation': {
+      id: '/evaluation'
+      path: '/evaluation'
+      fullPath: '/evaluation'
+      preLoaderRoute: typeof EvaluationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/physics-consistency': {
+      id: '/physics-consistency'
+      path: '/physics-consistency'
+      fullPath: '/physics-consistency'
+      preLoaderRoute: typeof PhysicsConsistencyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pmu-event-data': {
+      id: '/pmu-event-data'
+      path: '/pmu-event-data'
+      fullPath: '/pmu-event-data'
+      preLoaderRoute: typeof PmuEventDataRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reliability': {
+      id: '/reliability'
+      path: '/reliability'
+      fullPath: '/reliability'
+      preLoaderRoute: typeof ReliabilityRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stress-testing': {
+      id: '/stress-testing'
+      path: '/stress-testing'
+      fullPath: '/stress-testing'
+      preLoaderRoute: typeof StressTestingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/uncertainty': {
+      id: '/uncertainty'
+      path: '/uncertainty'
+      fullPath: '/uncertainty'
+      preLoaderRoute: typeof UncertaintyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AiModelRoute: AiModelRoute,
+  ArchitectureRoute: ArchitectureRoute,
+  EarlyPredictionRoute: EarlyPredictionRoute,
+  EvaluationRoute: EvaluationRoute,
+  PhysicsConsistencyRoute: PhysicsConsistencyRoute,
+  PmuEventDataRoute: PmuEventDataRoute,
+  ReliabilityRoute: ReliabilityRoute,
+  StressTestingRoute: StressTestingRoute,
+  UncertaintyRoute: UncertaintyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
