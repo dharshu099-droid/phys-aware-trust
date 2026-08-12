@@ -132,9 +132,9 @@ function ReliabilityPage() {
       </SectionCard>
 
       <DemoNotice>
-        All thresholds shown are prototype defaults. In a research study they must be selected on a validation split with
-        the operating cost of a missed instability versus a false alarm made explicit; nothing on this page constitutes a
-        validated operating point.
+        Uploaded records use a physics-informed risk score combining frequency deviation, RoCoF, voltage disturbance,
+        phase–frequency consistency and predictive interval width. Thresholds remain prototype defaults and require
+        validation on distinct labelled stable and unstable recordings before operational accuracy can be claimed.
       </DemoNotice>
     </>
   );
