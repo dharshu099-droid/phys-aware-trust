@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AiModelRouteImport } from './routes/ai-model'
 import { Route as EarlyPredictionRouteImport } from './routes/early-prediction'
 import { Route as PmuEventDataRouteImport } from './routes/pmu-event-data'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AiModelRoute = AiModelRouteImport.update({
+  id: '/ai-model',
+  path: '/ai-model',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EarlyPredictionRoute = EarlyPredictionRouteImport.update({
@@ -31,30 +37,34 @@ const PmuEventDataRoute = PmuEventDataRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ai-model': typeof AiModelRoute
   '/early-prediction': typeof EarlyPredictionRoute
   '/pmu-event-data': typeof PmuEventDataRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ai-model': typeof AiModelRoute
   '/early-prediction': typeof EarlyPredictionRoute
   '/pmu-event-data': typeof PmuEventDataRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/ai-model': typeof AiModelRoute
   '/early-prediction': typeof EarlyPredictionRoute
   '/pmu-event-data': typeof PmuEventDataRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/early-prediction' | '/pmu-event-data'
+  fullPaths: '/' | '/ai-model' | '/early-prediction' | '/pmu-event-data'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/early-prediction' | '/pmu-event-data'
-  id: '__root__' | '/' | '/early-prediction' | '/pmu-event-data'
+  to: '/' | '/ai-model' | '/early-prediction' | '/pmu-event-data'
+  id: '__root__' | '/' | '/ai-model' | '/early-prediction' | '/pmu-event-data'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AiModelRoute: typeof AiModelRoute
   EarlyPredictionRoute: typeof EarlyPredictionRoute
   PmuEventDataRoute: typeof PmuEventDataRoute
 }
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai-model': {
+      id: '/ai-model'
+      path: '/ai-model'
+      fullPath: '/ai-model'
+      preLoaderRoute: typeof AiModelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/early-prediction': {
@@ -87,6 +104,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AiModelRoute: AiModelRoute,
   EarlyPredictionRoute: EarlyPredictionRoute,
   PmuEventDataRoute: PmuEventDataRoute,
 }
