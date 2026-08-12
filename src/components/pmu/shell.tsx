@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { usePmu } from "@/lib/pmu/store";
 import { DecisionBadge } from "./ui";
+import { logoutPrototype } from "./auth-gate";
 
 export const NAV = [
   { to: "/", label: "Overview" },
@@ -64,6 +65,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </p>
           ) : null}
         </div>
+        <button onClick={logoutPrototype} className="mx-3 mb-5 w-[calc(100%-1.5rem)] rounded-md border border-sidebar-border px-3 py-2 text-left text-xs font-semibold text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground">Sign out</button>
       </aside>
       <main className="min-w-0 flex-1 px-5 py-7 lg:px-9 lg:py-9">
         <div className="mx-auto max-w-6xl space-y-7">{children}</div>

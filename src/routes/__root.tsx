@@ -14,6 +14,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { PmuProvider } from "@/lib/pmu/store";
 import { AppShell } from "@/components/pmu/shell";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { AuthGate } from "@/components/pmu/auth-gate";
 
 function NotFoundComponent() {
   return (
@@ -135,12 +136,14 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider delayDuration={150}>
-        <PmuProvider>
-          <AppShell>
+        <AuthGate>
+          <PmuProvider>
+            <AppShell>
             {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
             <Outlet />
-          </AppShell>
-        </PmuProvider>
+            </AppShell>
+          </PmuProvider>
+        </AuthGate>
       </TooltipProvider>
     </QueryClientProvider>
   );
