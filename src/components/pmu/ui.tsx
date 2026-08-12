@@ -35,9 +35,9 @@ export function SectionCard({
   children,
 }: {
   title: string;
-  subtitle?: string;
-  right?: ReactNode;
-  className?: string;
+  subtitle?: string | undefined;
+  right?: ReactNode | undefined;
+  className?: string | undefined;
   children: ReactNode;
 }) {
   return (
@@ -77,10 +77,10 @@ export function MetricCard({
 }: {
   label: string;
   value: string;
-  unit?: string;
-  hint?: string;
-  tone?: "neutral" | "stable" | "unstable" | "uncertain";
-  footer?: ReactNode;
+  unit?: string | undefined;
+  hint?: string | undefined;
+  tone?: "neutral" | "stable" | "unstable" | "uncertain" | undefined;
+  footer?: ReactNode | undefined;
 }) {
   const toneClass = {
     neutral: "text-foreground",
