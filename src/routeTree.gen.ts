@@ -10,33 +10,43 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PmuEventDataRouteImport } from './routes/pmu-event-data'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PmuEventDataRoute = PmuEventDataRouteImport.update({
+  id: '/pmu-event-data',
+  path: '/pmu-event-data',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/pmu-event-data': typeof PmuEventDataRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/pmu-event-data': typeof PmuEventDataRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/pmu-event-data': typeof PmuEventDataRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/pmu-event-data'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/pmu-event-data'
+  id: '__root__' | '/' | '/pmu-event-data'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  PmuEventDataRoute: typeof PmuEventDataRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +58,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pmu-event-data': {
+      id: '/pmu-event-data'
+      path: '/pmu-event-data'
+      fullPath: '/pmu-event-data'
+      preLoaderRoute: typeof PmuEventDataRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  PmuEventDataRoute: PmuEventDataRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
