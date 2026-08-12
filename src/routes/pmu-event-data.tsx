@@ -70,7 +70,7 @@ function EventDataPage() {
     try {
       setUploadMsg(`Loaded ${file.name}. Running trained prediction…`);
       const V = values("V"), I = values("I"), f = values("f");
-      const response = await fetch("https://pmu-5xe5ks4as-res-ql-ink1.vercel.app/predict", {
+      const response = await fetch("https://pmu-res-ql-ink1.vercel.app/predict", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ samples: [{ Frequency: f[last], Dfrequency: last > 0 ? (f[last]! - f[last - 1]!) / res.event.dt : 0, V_mean: mean(V), V_std: std(V), I_mean: mean(I), I_std: std(I) }] }),
       });
