@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AiModelRouteImport } from './routes/ai-model'
 import { Route as EarlyPredictionRouteImport } from './routes/early-prediction'
+import { Route as PhysicsConsistencyRouteImport } from './routes/physics-consistency'
 import { Route as PmuEventDataRouteImport } from './routes/pmu-event-data'
 import { Route as UncertaintyRouteImport } from './routes/uncertainty'
 
@@ -30,6 +31,11 @@ const EarlyPredictionRoute = EarlyPredictionRouteImport.update({
   path: '/early-prediction',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PhysicsConsistencyRoute = PhysicsConsistencyRouteImport.update({
+  id: '/physics-consistency',
+  path: '/physics-consistency',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PmuEventDataRoute = PmuEventDataRouteImport.update({
   id: '/pmu-event-data',
   path: '/pmu-event-data',
@@ -45,6 +51,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ai-model': typeof AiModelRoute
   '/early-prediction': typeof EarlyPredictionRoute
+  '/physics-consistency': typeof PhysicsConsistencyRoute
   '/pmu-event-data': typeof PmuEventDataRoute
   '/uncertainty': typeof UncertaintyRoute
 }
@@ -52,6 +59,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ai-model': typeof AiModelRoute
   '/early-prediction': typeof EarlyPredictionRoute
+  '/physics-consistency': typeof PhysicsConsistencyRoute
   '/pmu-event-data': typeof PmuEventDataRoute
   '/uncertainty': typeof UncertaintyRoute
 }
@@ -60,21 +68,33 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/ai-model': typeof AiModelRoute
   '/early-prediction': typeof EarlyPredictionRoute
+  '/physics-consistency': typeof PhysicsConsistencyRoute
   '/pmu-event-data': typeof PmuEventDataRoute
   '/uncertainty': typeof UncertaintyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/ai-model' | '/early-prediction' | '/pmu-event-data' | '/uncertainty'
+    | '/'
+    | '/ai-model'
+    | '/early-prediction'
+    | '/physics-consistency'
+    | '/pmu-event-data'
+    | '/uncertainty'
   fileRoutesByTo: FileRoutesByTo
   to:
-    '/' | '/ai-model' | '/early-prediction' | '/pmu-event-data' | '/uncertainty'
+    | '/'
+    | '/ai-model'
+    | '/early-prediction'
+    | '/physics-consistency'
+    | '/pmu-event-data'
+    | '/uncertainty'
   id:
     | '__root__'
     | '/'
     | '/ai-model'
     | '/early-prediction'
+    | '/physics-consistency'
     | '/pmu-event-data'
     | '/uncertainty'
   fileRoutesById: FileRoutesById
@@ -83,6 +103,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AiModelRoute: typeof AiModelRoute
   EarlyPredictionRoute: typeof EarlyPredictionRoute
+  PhysicsConsistencyRoute: typeof PhysicsConsistencyRoute
   PmuEventDataRoute: typeof PmuEventDataRoute
   UncertaintyRoute: typeof UncertaintyRoute
 }
@@ -110,6 +131,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EarlyPredictionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/physics-consistency': {
+      id: '/physics-consistency'
+      path: '/physics-consistency'
+      fullPath: '/physics-consistency'
+      preLoaderRoute: typeof PhysicsConsistencyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/pmu-event-data': {
       id: '/pmu-event-data'
       path: '/pmu-event-data'
@@ -131,6 +159,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AiModelRoute: AiModelRoute,
   EarlyPredictionRoute: EarlyPredictionRoute,
+  PhysicsConsistencyRoute: PhysicsConsistencyRoute,
   PmuEventDataRoute: PmuEventDataRoute,
   UncertaintyRoute: UncertaintyRoute,
 }
