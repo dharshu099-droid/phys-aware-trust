@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AiModelRouteImport } from './routes/ai-model'
 import { Route as EarlyPredictionRouteImport } from './routes/early-prediction'
 import { Route as PmuEventDataRouteImport } from './routes/pmu-event-data'
+import { Route as UncertaintyRouteImport } from './routes/uncertainty'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,18 +35,25 @@ const PmuEventDataRoute = PmuEventDataRouteImport.update({
   path: '/pmu-event-data',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UncertaintyRoute = UncertaintyRouteImport.update({
+  id: '/uncertainty',
+  path: '/uncertainty',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/ai-model': typeof AiModelRoute
   '/early-prediction': typeof EarlyPredictionRoute
   '/pmu-event-data': typeof PmuEventDataRoute
+  '/uncertainty': typeof UncertaintyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/ai-model': typeof AiModelRoute
   '/early-prediction': typeof EarlyPredictionRoute
   '/pmu-event-data': typeof PmuEventDataRoute
+  '/uncertainty': typeof UncertaintyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,22 @@ export interface FileRoutesById {
   '/ai-model': typeof AiModelRoute
   '/early-prediction': typeof EarlyPredictionRoute
   '/pmu-event-data': typeof PmuEventDataRoute
+  '/uncertainty': typeof UncertaintyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/ai-model' | '/early-prediction' | '/pmu-event-data'
+  fullPaths:
+    '/' | '/ai-model' | '/early-prediction' | '/pmu-event-data' | '/uncertainty'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/ai-model' | '/early-prediction' | '/pmu-event-data'
-  id: '__root__' | '/' | '/ai-model' | '/early-prediction' | '/pmu-event-data'
+  to:
+    '/' | '/ai-model' | '/early-prediction' | '/pmu-event-data' | '/uncertainty'
+  id:
+    | '__root__'
+    | '/'
+    | '/ai-model'
+    | '/early-prediction'
+    | '/pmu-event-data'
+    | '/uncertainty'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +84,7 @@ export interface RootRouteChildren {
   AiModelRoute: typeof AiModelRoute
   EarlyPredictionRoute: typeof EarlyPredictionRoute
   PmuEventDataRoute: typeof PmuEventDataRoute
+  UncertaintyRoute: typeof UncertaintyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +117,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PmuEventDataRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/uncertainty': {
+      id: '/uncertainty'
+      path: '/uncertainty'
+      fullPath: '/uncertainty'
+      preLoaderRoute: typeof UncertaintyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +132,7 @@ const rootRouteChildren: RootRouteChildren = {
   AiModelRoute: AiModelRoute,
   EarlyPredictionRoute: EarlyPredictionRoute,
   PmuEventDataRoute: PmuEventDataRoute,
+  UncertaintyRoute: UncertaintyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
