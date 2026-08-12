@@ -16,6 +16,7 @@ import { Route as EarlyPredictionRouteImport } from './routes/early-prediction'
 import { Route as PhysicsConsistencyRouteImport } from './routes/physics-consistency'
 import { Route as PmuEventDataRouteImport } from './routes/pmu-event-data'
 import { Route as ReliabilityRouteImport } from './routes/reliability'
+import { Route as StressTestingRouteImport } from './routes/stress-testing'
 import { Route as UncertaintyRouteImport } from './routes/uncertainty'
 
 const IndexRoute = IndexRouteImport.update({
@@ -53,6 +54,11 @@ const ReliabilityRoute = ReliabilityRouteImport.update({
   path: '/reliability',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StressTestingRoute = StressTestingRouteImport.update({
+  id: '/stress-testing',
+  path: '/stress-testing',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UncertaintyRoute = UncertaintyRouteImport.update({
   id: '/uncertainty',
   path: '/uncertainty',
@@ -67,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/physics-consistency': typeof PhysicsConsistencyRoute
   '/pmu-event-data': typeof PmuEventDataRoute
   '/reliability': typeof ReliabilityRoute
+  '/stress-testing': typeof StressTestingRoute
   '/uncertainty': typeof UncertaintyRoute
 }
 export interface FileRoutesByTo {
@@ -77,6 +84,7 @@ export interface FileRoutesByTo {
   '/physics-consistency': typeof PhysicsConsistencyRoute
   '/pmu-event-data': typeof PmuEventDataRoute
   '/reliability': typeof ReliabilityRoute
+  '/stress-testing': typeof StressTestingRoute
   '/uncertainty': typeof UncertaintyRoute
 }
 export interface FileRoutesById {
@@ -88,6 +96,7 @@ export interface FileRoutesById {
   '/physics-consistency': typeof PhysicsConsistencyRoute
   '/pmu-event-data': typeof PmuEventDataRoute
   '/reliability': typeof ReliabilityRoute
+  '/stress-testing': typeof StressTestingRoute
   '/uncertainty': typeof UncertaintyRoute
 }
 export interface FileRouteTypes {
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
     | '/physics-consistency'
     | '/pmu-event-data'
     | '/reliability'
+    | '/stress-testing'
     | '/uncertainty'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
     | '/physics-consistency'
     | '/pmu-event-data'
     | '/reliability'
+    | '/stress-testing'
     | '/uncertainty'
   id:
     | '__root__'
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
     | '/physics-consistency'
     | '/pmu-event-data'
     | '/reliability'
+    | '/stress-testing'
     | '/uncertainty'
   fileRoutesById: FileRoutesById
 }
@@ -131,6 +143,7 @@ export interface RootRouteChildren {
   PhysicsConsistencyRoute: typeof PhysicsConsistencyRoute
   PmuEventDataRoute: typeof PmuEventDataRoute
   ReliabilityRoute: typeof ReliabilityRoute
+  StressTestingRoute: typeof StressTestingRoute
   UncertaintyRoute: typeof UncertaintyRoute
 }
 
@@ -185,6 +198,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReliabilityRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/stress-testing': {
+      id: '/stress-testing'
+      path: '/stress-testing'
+      fullPath: '/stress-testing'
+      preLoaderRoute: typeof StressTestingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/uncertainty': {
       id: '/uncertainty'
       path: '/uncertainty'
@@ -203,6 +223,7 @@ const rootRouteChildren: RootRouteChildren = {
   PhysicsConsistencyRoute: PhysicsConsistencyRoute,
   PmuEventDataRoute: PmuEventDataRoute,
   ReliabilityRoute: ReliabilityRoute,
+  StressTestingRoute: StressTestingRoute,
   UncertaintyRoute: UncertaintyRoute,
 }
 export const routeTree = rootRouteImport
