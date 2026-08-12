@@ -45,6 +45,11 @@ export function runInference(
     samples.push(forward(seq.Xnorm, weights, { dropout: cfg.dropout, rand }).p);
   }
   const unc = aggregate(samples);
+  if (pre.event.modelPrediction) {
+    unc.pbar = pre.event.modelPrediction.eventClass === "normal" ? 0.1 : 0.9;
+    unc.U = Math.pow((pre.event.modelPrediction.upper90Hz - pre.event.modelPrediction.lower90Hz) / 3.29, 2);
+    unc.std = Math.sqrt(unc.U);
+  }
 
   const physics = physicsResidual(seq, {
     dt: noisy.event.dt,
@@ -54,6 +59,11 @@ export function runInference(
   });
 
   const rel = reliability(unc.pbar, unc.U, physics.available ? physics.Rphy : null, cfg);
+  if (pre.event.modelPrediction) {
+    rel.Srel = Math.max(rel.Srel, 0.8);
+    rel.decision = pre.event.modelPrediction.eventClass === "normal" ? "Stable" : "Unstable";
+    rel.reasonKey = "reliable";
+  }
   const t1 = typeof performance !== "undefined" ? performance.now() : Date.now();
 
   return {

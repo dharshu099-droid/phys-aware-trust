@@ -41,7 +41,7 @@ const COLORS: Record<ChannelKey, string> = {
 };
 
 function EventDataPage() {
-  const { event, pre, cfg, addEvent, result } = usePmu();
+  const { event, pre, cfg, addEvent, updateEvent, result } = usePmu();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadMsg, setUploadMsg] = useState<string | null>(null);
   const [cursor, setCursor] = useState(0);
@@ -63,9 +63,25 @@ function EventDataPage() {
       return;
     }
     addEvent(res.event);
-    setUploadMsg(
-      `Loaded ${file.name}: ${res.detected.join(", ")} over ${res.event.t.length} samples. ${res.errors.join(" ")}`,
-    );
+    const last = res.event.t.length - 1;
+    const values = (key: ChannelKey) => res.event!.channels[key] ?? [];
+    const mean = (items: number[]) => items.reduce((a, b) => a + b, 0) / Math.max(items.length, 1);
+    const std = (items: number[]) => { const m = mean(items); return Math.sqrt(items.reduce((s, x) => s + (x - m) ** 2, 0) / Math.max(items.length - 1, 1)); };
+    try {
+      setUploadMsg(`Loaded ${file.name}. Running trained prediction…`);
+      const V = values("V"), I = values("I"), f = values("f");
+      const response = await fetch("https://pmu-5xe5ks4as-res-ql-ink1.vercel.app/predict", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ samples: [{ Frequency: f[last], Dfrequency: last > 0 ? (f[last]! - f[last - 1]!) / res.event.dt : 0, V_mean: mean(V), V_std: std(V), I_mean: mean(I), I_std: std(I) }] }),
+      });
+      if (!response.ok) throw new Error(`backend returned ${response.status}`);
+      const p = await response.json() as { frequency_hz: number; lower_90_hz: number; upper_90_hz: number };
+      const eventClass = p.frequency_hz < 49.8 ? "under-frequency" : p.frequency_hz > 50.2 ? "over-frequency" : "normal";
+      updateEvent(res.event.id, { modelPrediction: { frequencyHz: p.frequency_hz, lower90Hz: p.lower_90_hz, upper90Hz: p.upper_90_hz, eventClass } });
+      setUploadMsg(`Analyzed ${file.name}: predicted ${p.frequency_hz.toFixed(4)} Hz (${eventClass}); every dashboard page now uses this uploaded event.`);
+    } catch (error) {
+      setUploadMsg(`Loaded ${file.name}, but trained prediction failed: ${error instanceof Error ? error.message : "unknown error"}`);
+    }
   }
 
   const cursorIdx = Math.min(pre.event.t.length - 1, Math.round((cursor / 100) * (pre.event.t.length - 1)));

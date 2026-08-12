@@ -24,6 +24,12 @@ export interface PmuEvent {
   channels: Partial<Record<ChannelKey, number[]>>;
   groundTruth?: "stable" | "unstable" | null;
   notes?: string;
+  modelPrediction?: {
+    frequencyHz: number;
+    lower90Hz: number;
+    upper90Hz: number;
+    eventClass: "normal" | "under-frequency" | "over-frequency";
+  };
 }
 
 export interface PipelineConfig {

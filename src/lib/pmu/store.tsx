@@ -7,6 +7,7 @@ import { DEFAULT_CONFIG, type ChannelKey, type PipelineConfig, type PmuEvent } f
 interface Ctx {
   events: PmuEvent[];
   addEvent: (e: PmuEvent) => void;
+  updateEvent: (id: string, patch: Partial<PmuEvent>) => void;
   eventId: string;
   setEventId: (id: string) => void;
   event: PmuEvent;
@@ -38,6 +39,7 @@ export function PmuProvider({ children }: { children: ReactNode }) {
       setEventId(e.id);
       setCfgState((c) => ({ ...c, nominalFrequency: e.nominalFrequency, maskedChannels: [] }));
     },
+    updateEvent: (id, patch) => setEvents((prev) => prev.map((item) => item.id === id ? { ...item, ...patch } : item)),
     eventId,
     setEventId: (id) => {
       setEventId(id);

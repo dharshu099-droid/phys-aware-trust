@@ -58,6 +58,11 @@ export function AppShell({ children }: { children: ReactNode }) {
               p̄ {result.unc.pbar.toFixed(2)} · S {result.rel.Srel.toFixed(2)}
             </span>
           </div>
+          {event.modelPrediction ? (
+            <p className="mono-num mt-2 text-[11px] leading-relaxed text-sidebar-primary">
+              Predicted {event.modelPrediction.frequencyHz.toFixed(4)} Hz · 90% [{event.modelPrediction.lower90Hz.toFixed(4)}, {event.modelPrediction.upper90Hz.toFixed(4)}]
+            </p>
+          ) : null}
         </div>
       </aside>
       <main className="min-w-0 flex-1 px-5 py-7 lg:px-9 lg:py-9">

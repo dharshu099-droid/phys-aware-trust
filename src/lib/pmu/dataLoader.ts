@@ -185,6 +185,14 @@ export function parseCsv(
     const idx = colOf(ALIASES[c.key]);
     if (idx >= 0) map[c.key] = idx;
   }
+  const frequencyIdx = header.findIndex((h) => h === "frequency");
+  const voltageMagIdx = header.map((h, i) => (h.startsWith("mag_v") ? i : -1)).filter((i) => i >= 0);
+  const voltageAngleIdx = header.map((h, i) => (h.startsWith("angle_v") ? i : -1)).filter((i) => i >= 0);
+  const currentMagIdx = header.map((h, i) => (h.startsWith("mag_i") ? i : -1)).filter((i) => i >= 0);
+  if (frequencyIdx >= 0) map.f = frequencyIdx;
+  if (voltageMagIdx.length) map.V = voltageMagIdx[0];
+  if (voltageAngleIdx.length) map.theta = voltageAngleIdx[0];
+  if (currentMagIdx.length) map.I = currentMagIdx[0];
   const detected = Object.keys(map) as ChannelKey[];
   if (detected.length === 0)
     return {
@@ -200,17 +208,18 @@ export function parseCsv(
 
   for (let r = 1; r < lines.length; r++) {
     const cells = lines[r]!.split(sep);
-    t.push(timeIdx >= 0 ? Number(cells[timeIdx]) : (r - 1) / 240);
+    t.push(timeIdx >= 0 ? Number(cells[timeIdx]) : (r - 1) / 50);
     for (const k of detected) {
-      const raw = cells[map[k]!];
-      const val = raw === undefined || raw === "" ? NaN : Number(raw);
+      const indices = k === "V" ? voltageMagIdx : k === "theta" ? voltageAngleIdx : k === "I" ? currentMagIdx : [map[k]!];
+      const nums = indices.map((idx) => Number(cells[idx])).filter(Number.isFinite);
+      const val = nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : NaN;
       if (!Number.isFinite(val)) missing++;
       channels[k]!.push(val);
     }
   }
   if (missing > 0) errors.push(`${missing} non-numeric / missing cell(s) detected — handled by the preprocessing stage.`);
 
-  const dt = t.length > 1 && Number.isFinite(t[1]!) && Number.isFinite(t[0]!) ? Math.abs(t[1]! - t[0]!) || 1 / 240 : 1 / 240;
+  const dt = t.length > 1 && Number.isFinite(t[1]!) && Number.isFinite(t[0]!) ? Math.abs(t[1]! - t[0]!) || 1 / 50 : 1 / 50;
   const fixedT = t.map((v, i) => (Number.isFinite(v) ? v : i * dt));
 
   return {
