@@ -179,7 +179,7 @@ export function parseCsv(
   const header = lines[0]!.split(sep).map((h) => h.trim().toLowerCase().replace(/[\s()[\]]/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, ""));
 
   const colOf = (cands: string[]) => header.findIndex((h) => cands.includes(h));
-  const timeIdx = colOf(["t", "time", "timestamp", "time_s", "seconds"]);
+  const timeIdx = colOf(["t", "time", "timestamp", "date_time", "datetime", "time_s", "seconds"]);
   const map: Partial<Record<ChannelKey, number>> = {};
   for (const c of CHANNELS) {
     const idx = colOf(ALIASES[c.key]);
@@ -189,11 +189,16 @@ export function parseCsv(
   const voltageMagIdx = header.map((h, i) => (h.startsWith("mag_v") ? i : -1)).filter((i) => i >= 0);
   const voltageAngleIdx = header.map((h, i) => (h.startsWith("angle_v") ? i : -1)).filter((i) => i >= 0);
   const currentMagIdx = header.map((h, i) => (h.startsWith("mag_i") ? i : -1)).filter((i) => i >= 0);
+  const currentAngleIdx = header.map((h, i) => (h.startsWith("angle_i") ? i : -1)).filter((i) => i >= 0);
   if (frequencyIdx >= 0) map.f = frequencyIdx;
   if (voltageMagIdx.length) map.V = voltageMagIdx[0];
   if (voltageAngleIdx.length) map.theta = voltageAngleIdx[0];
   if (currentMagIdx.length) map.I = currentMagIdx[0];
-  const detected = Object.keys(map) as ChannelKey[];
+  const sourceDetected = Object.keys(map) as ChannelKey[];
+  const canDerivePower = voltageMagIdx.length > 0 && currentMagIdx.length > 0 && voltageAngleIdx.length > 0 && currentAngleIdx.length > 0;
+  const detected = [...sourceDetected];
+  if (canDerivePower && !detected.includes("P")) detected.push("P");
+  if (canDerivePower && !detected.includes("Q")) detected.push("Q");
   if (detected.length === 0)
     return {
       event: null,
@@ -206,21 +211,57 @@ export function parseCsv(
   for (const k of detected) channels[k] = [];
   let missing = 0;
 
+  let firstTimestampMs: number | null = null;
   for (let r = 1; r < lines.length; r++) {
     const cells = lines[r]!.split(sep);
-    t.push(timeIdx >= 0 ? Number(cells[timeIdx]) : (r - 1) / 50);
-    for (const k of detected) {
+    if (timeIdx >= 0) {
+      const numericTime = Number(cells[timeIdx]);
+      const parsedMs = Date.parse(cells[timeIdx] ?? "");
+      if (Number.isFinite(numericTime)) t.push(numericTime);
+      else if (Number.isFinite(parsedMs)) { firstTimestampMs ??= parsedMs; t.push((parsedMs - firstTimestampMs) / 1000); }
+      else t.push((r - 1) / 50);
+    } else t.push((r - 1) / 50);
+    for (const k of sourceDetected) {
       const indices = k === "V" ? voltageMagIdx : k === "theta" ? voltageAngleIdx : k === "I" ? currentMagIdx : [map[k]!];
       const nums = indices.map((idx) => Number(cells[idx])).filter(Number.isFinite);
       const val = nums.length ? nums.reduce((a, b) => a + b, 0) / nums.length : NaN;
       if (!Number.isFinite(val)) missing++;
       channels[k]!.push(val);
     }
+    if (canDerivePower) {
+      let p = 0, q = 0, pairs = 0;
+      const count = Math.min(voltageMagIdx.length, currentMagIdx.length, voltageAngleIdx.length, currentAngleIdx.length);
+      for (let j = 0; j < count; j++) {
+        const vm = Number(cells[voltageMagIdx[j]!]), im = Number(cells[currentMagIdx[j]!]);
+        const va = Number(cells[voltageAngleIdx[j]!]), ia = Number(cells[currentAngleIdx[j]!]);
+        if (![vm, im, va, ia].every(Number.isFinite)) continue;
+        const delta = (va - ia) * Math.PI / 180;
+        p += vm * im * Math.cos(delta); q += vm * im * Math.sin(delta); pairs++;
+      }
+      channels.P!.push(pairs ? p / pairs : NaN);
+      channels.Q!.push(pairs ? q / pairs : NaN);
+    }
   }
   if (missing > 0) errors.push(`${missing} non-numeric / missing cell(s) detected — handled by the preprocessing stage.`);
 
   const dt = t.length > 1 && Number.isFinite(t[1]!) && Number.isFinite(t[0]!) ? Math.abs(t[1]! - t[0]!) || 1 / 50 : 1 / 50;
   const fixedT = t.map((v, i) => (Number.isFinite(v) ? v : i * dt));
+  // Express large instrument magnitudes and derived powers in per-unit so all
+  // dashboard modules operate on comparable, physically meaningful scales.
+  for (const key of ["V", "I", "P", "Q"] as ChannelKey[]) {
+    const arr = channels[key];
+    if (!arr?.length) continue;
+    const baselineCount = Math.max(5, Math.min(arr.length, Math.round(0.1 * arr.length)));
+    const baseline = arr.slice(0, baselineCount).reduce((sum, value) => sum + Math.abs(value), 0) / baselineCount;
+    if (baseline > 10) channels[key] = arr.map((value) => value / baseline);
+  }
+  const frequency = channels.f ?? [];
+  let eventIndex = Math.floor(fixedT.length * 0.2);
+  let largestStep = -1;
+  for (let i = 1; i < frequency.length; i++) {
+    const step = Math.abs(frequency[i]! - frequency[i - 1]!);
+    if (step > largestStep) { largestStep = step; eventIndex = i; }
+  }
 
   return {
     event: {
@@ -233,7 +274,7 @@ export function parseCsv(
       nominalFrequency: opts.nominalFrequency,
       angleUnit: opts.angleUnit,
       dt,
-      eventTime: fixedT[Math.floor(fixedT.length * 0.2)] ?? 0,
+      eventTime: fixedT[eventIndex] ?? 0,
       t: fixedT,
       channels,
       groundTruth: null,
