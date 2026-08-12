@@ -106,6 +106,18 @@ function EventDataPage() {
         )}
       </DemoNotice>
 
+      {event.origin === "upload" ? (
+        <div className={`rounded-md border-2 p-5 ${result.rel.decision === "Stable" ? "border-stable/50 bg-stable/10" : result.rel.decision === "Unstable" ? "border-unstable/50 bg-unstable/10" : "border-uncertain/50 bg-uncertain/10"}`}>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Live analysis result</p>
+          <div className="mt-2 flex flex-wrap items-end gap-4">
+            <p className="mono-num text-3xl font-bold text-foreground">{event.modelPrediction ? `${event.modelPrediction.frequencyHz.toFixed(4)} Hz` : "Analyzing…"}</p>
+            <StatusPill status={result.rel.decision === "Stable" ? "completed" : "warning"}>{result.rel.decision}</StatusPill>
+          </div>
+          {event.modelPrediction ? <p className="mono-num mt-2 text-sm text-muted-foreground">90% prediction interval: {event.modelPrediction.lower90Hz.toFixed(4)}–{event.modelPrediction.upper90Hz.toFixed(4)} Hz · {event.modelPrediction.eventClass}</p> : null}
+          <p className="mt-3 text-sm text-muted-foreground">The decision is calculated from CSV measurements, not the filename. Files with identical contents produce identical results even when their names say “under” or “over”.</p>
+        </div>
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-2">
         <SectionCard title="Event selection" subtitle="Multiple PMU events can be held in the session.">
           <div className="space-y-3">
