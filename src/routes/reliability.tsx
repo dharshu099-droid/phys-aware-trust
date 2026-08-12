@@ -40,13 +40,11 @@ function ReliabilityPage() {
 
       <DecisionBanner
         decision={decision}
-        pbar={pbar}
-        Srel={Srel}
-        detail={
+        message={`Mean instability probability p̄ = ${fmt(pbar)} with reliability score S_rel = ${fmt(Srel)} against τ_R = ${cfg.tauR}.${
           result.physics.available
-            ? undefined
-            : "Physics-consistency term omitted: required PMU channels are unavailable for this observation."
-        }
+            ? ""
+            : " Physics-consistency term omitted: the required PMU channels are unavailable for this observation."
+        }`}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -124,9 +122,7 @@ function ReliabilityPage() {
         </div>
       </SectionCard>
 
-      <SectionCard title="Reliability explanation" subtitle="Generated from the current numbers, not a fixed template.">
-        <ReliabilityExplanation />
-      </SectionCard>
+      <ReliabilityExplanation />
 
       <SectionCard
         title="Threshold and calibration settings"
