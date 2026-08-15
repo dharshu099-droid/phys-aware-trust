@@ -53,12 +53,36 @@ export function SignalChart({
   height?: number;
   yLabel?: string;
 }) {
+  const values = data.map((point) => point[dataKey]).filter(Number.isFinite);
+  const ySpan = values.length ? Math.max(...values) - Math.min(...values) : 0;
+  const yPrecision = ySpan < 0.01 ? 4 : ySpan < 0.1 ? 3 : 2;
+  const axisUnit = unit ? ` (${unit})` : "";
+
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={data} margin={{ top: 6, right: 12, bottom: 4, left: -8 }}>
+      <LineChart data={data} margin={{ top: 6, right: 18, bottom: 34, left: 26 }}>
         <CartesianGrid stroke="var(--grid-line)" vertical={false} />
-        <XAxis dataKey="t" {...axis} tickFormatter={(v: number) => `${(v * 1000).toFixed(0)}`} minTickGap={28} />
-        <YAxis {...axis} width={54} domain={["auto", "auto"]} tickFormatter={(v: number) => v.toFixed(2)} />
+        <XAxis
+          dataKey="t"
+          {...axis}
+          tickFormatter={(v: number) => `${(v * 1000).toFixed(0)}`}
+          minTickGap={28}
+          label={{ value: "Time (ms)", position: "insideBottom", offset: -22, fill: "var(--muted-foreground)", fontSize: 11 }}
+        />
+        <YAxis
+          {...axis}
+          width={70}
+          domain={["auto", "auto"]}
+          tickFormatter={(v: number) => v.toFixed(yPrecision)}
+          label={{
+            value: `${yLabel ?? dataKey}${axisUnit}`,
+            angle: -90,
+            position: "insideLeft",
+            offset: -14,
+            fill: "var(--muted-foreground)",
+            fontSize: 11,
+          }}
+        />
         <Tooltip
           {...tooltipStyle}
           formatter={(v: number) => [`${v.toFixed(4)}${unit ? ` ${unit}` : ""}`, yLabel ?? dataKey]}
