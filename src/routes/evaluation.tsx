@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Download } from "lucide-react";
 import { useMemo } from "react";
 import { usePmu } from "@/lib/pmu/store";
 import { prepare, runInference } from "@/lib/pmu/inference";
 import { DecisionBadge, DemoNotice, Formula, MetricCard, PageHeader, SectionCard, fmt } from "@/components/pmu/ui";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/evaluation")({
   head: () => ({
@@ -103,6 +105,59 @@ function EvaluationPage() {
             ))}
           </TableBody>
         </Table>
+      </SectionCard>
+
+      <SectionCard
+        title="Downloadable evaluation graphs"
+        subtitle="Open either graph for a full-size view, or download the image and its plotted values."
+      >
+        <div className="grid gap-6 xl:grid-cols-2">
+          <article className="space-y-3">
+            <a href="/downloads/physics-inconsistency-reliability.svg" target="_blank" rel="noreferrer">
+              <img
+                src="/downloads/physics-inconsistency-reliability.svg"
+                alt="Prediction reliability decreases as the physics-inconsistency residual increases"
+                className="w-full rounded-md border bg-white"
+              />
+            </a>
+            <h3 className="text-sm font-semibold">Physics inconsistency versus prediction reliability</h3>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild size="sm">
+                <a href="/downloads/physics-inconsistency-reliability.svg" download>
+                  <Download className="size-4" /> Download graph
+                </a>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <a href="/downloads/physics-inconsistency-reliability.csv" download>
+                  <Download className="size-4" /> Download CSV
+                </a>
+              </Button>
+            </div>
+          </article>
+
+          <article className="space-y-3">
+            <a href="/downloads/evaluated-pmu-stable-unstable-behaviour.svg" target="_blank" rel="noreferrer">
+              <img
+                src="/downloads/evaluated-pmu-stable-unstable-behaviour.svg"
+                alt="Stable and unstable probabilities across 100, 200, 300 and 500 millisecond observation windows"
+                className="w-full rounded-md border bg-white"
+              />
+            </a>
+            <h3 className="text-sm font-semibold">Stable and unstable prediction behaviour</h3>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild size="sm">
+                <a href="/downloads/evaluated-pmu-stable-unstable-behaviour.svg" download>
+                  <Download className="size-4" /> Download graph
+                </a>
+              </Button>
+              <Button asChild size="sm" variant="outline">
+                <a href="/downloads/evaluated-pmu-stable-unstable-behaviour.csv" download>
+                  <Download className="size-4" /> Download CSV
+                </a>
+              </Button>
+            </div>
+          </article>
+        </div>
       </SectionCard>
 
       <SectionCard title="Metric definitions" subtitle="What a complete study must report for a model that may abstain.">

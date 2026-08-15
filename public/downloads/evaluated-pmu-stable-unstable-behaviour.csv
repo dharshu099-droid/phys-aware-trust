@@ -1,0 +1,5 @@
+observation_window_ms,samples,stable_probability,unstable_probability,decision
+100,5,0.4292,0.5708,Uncertain
+200,10,0.4123,0.5877,Uncertain
+300,15,0.4070,0.5930,Uncertain
+500,25,0.4070,0.5930,Uncertain
