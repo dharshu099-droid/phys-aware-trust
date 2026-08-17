@@ -58,7 +58,7 @@ export interface BackendAnalysis {
   windows: Record<string, BackendPrediction>;
 }
 
-export const DEFAULT_PMU_API_URL = (import.meta.env.VITE_PMU_API_URL as string | undefined)?.replace(/\/$/, "") ?? "http://127.0.0.1:8000";
+export const DEFAULT_PMU_API_URL = (import.meta.env.VITE_PMU_API_URL as string | undefined)?.replace(/\/$/, "") ?? (typeof window !== "undefined" ? window.location.origin : "");
 
 export function getPmuApiUrl() {
   if (typeof window === "undefined") return DEFAULT_PMU_API_URL;
@@ -78,6 +78,30 @@ export async function analyzePmuFile(file: File, nominalFrequency: number): Prom
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(payload.detail ?? `Backend returned ${response.status}`);
   return payload as BackendAnalysis;
+}
+
+export interface OneClassPrediction {
+  file: string;
+  rows: number;
+  angle_column: string;
+  decision: "Normal" | "Anomalous";
+  anomaly_probability: number;
+  normal_probability: number;
+  anomaly_score: number;
+  threshold: number;
+  reliability_score: number;
+  model_status: "READY_ONE_CLASS";
+  warning: string;
+}
+
+export async function analyzeAnomalyFile(file: File): Promise<OneClassPrediction> {
+  const form = new FormData();
+  form.append("file", file);
+  const origin = typeof window !== "undefined" ? window.location.origin : getPmuApiUrl();
+  const response = await fetch(`${origin}/api/anomaly/predict`, { method: "POST", body: form });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.detail ?? `Backend returned ${response.status}`);
+  return payload as OneClassPrediction;
 }
 
 async function postFiles(path: string, files: File[], fields: Record<string, string | number>) {

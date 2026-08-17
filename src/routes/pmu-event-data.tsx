@@ -11,8 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
-import { analyzePmuFile, getPmuApiUrl, setPmuApiUrl } from "@/lib/pmu/backend";
-import { Input } from "@/components/ui/input";
+import { analyzeAnomalyFile, type OneClassPrediction } from "@/lib/pmu/backend";
 
 export const Route = createFileRoute("/pmu-event-data")({
   head: () => ({
@@ -43,12 +42,12 @@ const COLORS: Record<ChannelKey, string> = {
 };
 
 function EventDataPage() {
-  const { event, pre, cfg, addEvent, updateEvent, result } = usePmu();
+  const { event, pre, cfg, addEvent, result } = usePmu();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadMsg, setUploadMsg] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [apiUrl, setApiUrlState] = useState(() => getPmuApiUrl());
   const [cursor, setCursor] = useState(0);
+  const [anomaly, setAnomaly] = useState<OneClassPrediction | null>(null);
 
   const available = CHANNELS.filter((c) => event.channels[c.key]);
   const windowStart = pre.event.t[result.seq.startIdx] ?? 0;
@@ -61,6 +60,7 @@ function EventDataPage() {
 
   async function onUpload(file: File) {
     setIsAnalyzing(true);
+    setAnomaly(null);
     const text = await file.text();
     const res = parseCsv(text, file.name, { nominalFrequency: cfg.nominalFrequency, angleUnit: "deg" });
     if (!res.event) {
@@ -71,18 +71,11 @@ function EventDataPage() {
     addEvent(res.event);
     try {
       setUploadMsg(`Loaded ${file.name}. Running the Python CfC/physics backend…`);
-      const backendAnalysis = await analyzePmuFile(file, cfg.nominalFrequency);
-      updateEvent(res.event.id, {
-        backendAnalysis,
-        groundTruth: backendAnalysis.inspection.label?.toLowerCase() as "stable" | "unstable" | undefined,
-      });
-      setUploadMsg(
-        backendAnalysis.model.status === "UNTRAINED"
-          ? `Analyzed ${file.name}: preprocessing and R_phy are available. Model status is UNTRAINED because no valid labelled model artifact exists; probabilities were not invented.`
-          : `Analyzed ${file.name} with the ${backendAnalysis.model.status} CfC backend; every dashboard page now uses this uploaded event.`,
-      );
+      const output = await analyzeAnomalyFile(file);
+      setAnomaly(output);
+      setUploadMsg(`Analyzed ${file.name} with the trained one-class CfC backend.`);
     } catch (error) {
-      setUploadMsg(`Loaded ${file.name}, but the Python backend at ${getPmuApiUrl()} is unavailable: ${error instanceof Error ? error.message : "unknown error"}. No probabilities or stability result were fabricated.`);
+      setUploadMsg(`Loaded ${file.name}, but prediction failed: ${error instanceof Error ? error.message : "unknown error"}.`);
     } finally {
       setIsAnalyzing(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -141,6 +134,16 @@ function EventDataPage() {
         </div>
       ) : null}
 
+      {anomaly ? (
+        <div className={`rounded-md border-2 p-5 ${anomaly.decision === "Normal" ? "border-stable/50 bg-stable/10" : "border-unstable/50 bg-unstable/10"}`}>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Trained one-class CfC prediction</p>
+          <p className="mono-num mt-2 text-3xl font-bold text-foreground">{anomaly.decision}</p>
+          <p className="mono-num mt-3 text-sm text-muted-foreground">Normal probability: {anomaly.normal_probability.toFixed(4)} · Anomaly probability: {anomaly.anomaly_probability.toFixed(4)} · Reliability: {anomaly.reliability_score.toFixed(4)}</p>
+          <p className="mono-num mt-1 text-sm text-muted-foreground">Anomaly score: {anomaly.anomaly_score.toFixed(5)} · calibrated threshold: {anomaly.threshold.toFixed(5)} · rows: {anomaly.rows}</p>
+          <p className="mt-3 text-xs text-muted-foreground">{anomaly.warning}</p>
+        </div>
+      ) : null}
+
       <div className="grid gap-4 lg:grid-cols-2">
         <SectionCard title="Event selection" subtitle="Multiple PMU events can be held in the session.">
           <div className="space-y-3">
@@ -153,10 +156,6 @@ function EventDataPage() {
           subtitle="Header row plus PMU samples. The backend detects timestamps, locations, phases, magnitudes, angles, frequency and ROCOF."
         >
           <div className="space-y-3">
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Input value={apiUrl} onChange={(event) => setApiUrlState(event.target.value)} aria-label="Python backend URL" className="h-9 text-xs" />
-              <Button type="button" size="sm" variant="outline" onClick={() => { setPmuApiUrl(apiUrl); setUploadMsg(`Backend URL saved: ${apiUrl}`); }} className="text-xs">Save backend URL</Button>
-            </div>
             <input
               ref={fileRef}
               type="file"
@@ -167,7 +166,7 @@ function EventDataPage() {
                 if (f) void onUpload(f);
               }}
             />
-            <Button size="sm" disabled={isAnalyzing} onClick={() => { setPmuApiUrl(apiUrl); fileRef.current?.click(); }} className="text-xs">
+            <Button size="sm" disabled={isAnalyzing} onClick={() => fileRef.current?.click()} className="text-xs">
               {isAnalyzing ? "Analyzing all features…" : "Choose CSV file"}
             </Button>
             {uploadMsg ? <p className="mono-num text-xs text-muted-foreground">{uploadMsg}</p> : null}
