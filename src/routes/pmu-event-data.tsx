@@ -11,6 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
+import { analyzePmuFile, getPmuApiUrl, setPmuApiUrl } from "@/lib/pmu/backend";
+import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/pmu-event-data")({
   head: () => ({
@@ -45,6 +47,7 @@ function EventDataPage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadMsg, setUploadMsg] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [apiUrl, setApiUrlState] = useState(() => getPmuApiUrl());
   const [cursor, setCursor] = useState(0);
 
   const available = CHANNELS.filter((c) => event.channels[c.key]);
@@ -66,39 +69,20 @@ function EventDataPage() {
       return;
     }
     addEvent(res.event);
-    const last = res.event.t.length - 1;
-    const values = (key: ChannelKey) => res.event!.channels[key] ?? [];
-    const mean = (items: number[]) => items.reduce((a, b) => a + b, 0) / Math.max(items.length, 1);
-    const std = (items: number[]) => { const m = mean(items); return Math.sqrt(items.reduce((s, x) => s + (x - m) ** 2, 0) / Math.max(items.length - 1, 1)); };
-    const eventClassFor = (frequencyHz: number) => frequencyHz < 49.8 ? "under-frequency" as const : frequencyHz > 50.2 ? "over-frequency" as const : "normal" as const;
-    const f = values("f");
     try {
-      setUploadMsg(`Loaded ${file.name}. Running trained prediction…`);
-      const V = values("V"), I = values("I");
-      const response = await fetch("https://pmu-res-ql-ink1.vercel.app/predict", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ samples: [{ Frequency: f[last], Dfrequency: last > 0 ? (f[last]! - f[last - 1]!) / res.event.dt : 0, V_mean: mean(V), V_std: std(V), I_mean: mean(I), I_std: std(I) }] }),
-      });
-      if (!response.ok) throw new Error(`backend returned ${response.status}`);
-      const p = await response.json() as { frequency_hz: number; lower_90_hz: number; upper_90_hz: number };
-      const eventClass = eventClassFor(p.frequency_hz);
-      updateEvent(res.event.id, { modelPrediction: { frequencyHz: p.frequency_hz, lower90Hz: p.lower_90_hz, upper90Hz: p.upper_90_hz, eventClass } });
-      setUploadMsg(`Analyzed ${file.name}: predicted ${p.frequency_hz.toFixed(4)} Hz (${eventClass}); every dashboard page now uses this uploaded event.`);
-    } catch (error) {
-      // Keep the complete dashboard functional if the remote forecasting API is temporarily unavailable.
-      const frequencyHz = f[last] ?? cfg.nominalFrequency;
-      const deltas = f.slice(1).map((value, index) => value - f[index]!);
-      const halfWidth = Math.max(0.005, 1.645 * std(deltas));
-      const eventClass = eventClassFor(frequencyHz);
+      setUploadMsg(`Loaded ${file.name}. Running the Python CfC/physics backend…`);
+      const backendAnalysis = await analyzePmuFile(file, cfg.nominalFrequency);
       updateEvent(res.event.id, {
-        modelPrediction: {
-          frequencyHz,
-          lower90Hz: frequencyHz - halfWidth,
-          upper90Hz: frequencyHz + halfWidth,
-          eventClass,
-        },
+        backendAnalysis,
+        groundTruth: backendAnalysis.inspection.label?.toLowerCase() as "stable" | "unstable" | undefined,
       });
-      setUploadMsg(`Analyzed ${file.name} with the local physics-informed pipeline. The remote forecast was unavailable (${error instanceof Error ? error.message : "unknown error"}), but every dashboard feature has been updated.`);
+      setUploadMsg(
+        backendAnalysis.model.status === "UNTRAINED"
+          ? `Analyzed ${file.name}: preprocessing and R_phy are available. Model status is UNTRAINED because no valid labelled model artifact exists; probabilities were not invented.`
+          : `Analyzed ${file.name} with the ${backendAnalysis.model.status} CfC backend; every dashboard page now uses this uploaded event.`,
+      );
+    } catch (error) {
+      setUploadMsg(`Loaded ${file.name}, but the Python backend at ${getPmuApiUrl()} is unavailable: ${error instanceof Error ? error.message : "unknown error"}. No probabilities or stability result were fabricated.`);
     } finally {
       setIsAnalyzing(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -131,10 +115,13 @@ function EventDataPage() {
         <div className={`rounded-md border-2 p-5 ${result.rel.decision === "Stable" ? "border-stable/50 bg-stable/10" : result.rel.decision === "Unstable" ? "border-unstable/50 bg-unstable/10" : "border-uncertain/50 bg-uncertain/10"}`}>
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Live analysis result</p>
           <div className="mt-2 flex flex-wrap items-end gap-4">
-            <p className="mono-num text-3xl font-bold text-foreground">{event.modelPrediction ? `${event.modelPrediction.frequencyHz.toFixed(4)} Hz` : "Analyzing…"}</p>
+            <p className="mono-num text-3xl font-bold text-foreground">{result.modelOutputAvailable ? result.rel.decision : result.modelStatus}</p>
             <StatusPill status={result.rel.decision === "Stable" ? "completed" : "warning"}>{result.rel.decision}</StatusPill>
           </div>
-          {event.modelPrediction ? <p className="mono-num mt-2 text-sm text-muted-foreground">90% prediction interval: {event.modelPrediction.lower90Hz.toFixed(4)}–{event.modelPrediction.upper90Hz.toFixed(4)} Hz · {event.modelPrediction.eventClass}</p> : null}
+          <p className="mono-num mt-2 text-sm text-muted-foreground">
+            P(stable): {fmt(result.modelOutputAvailable ? 1 - result.unc.pbar : null, 4)} · P(unstable): {fmt(result.modelOutputAvailable ? result.unc.pbar : null, 4)} · U_evi: {fmt(result.modelOutputAvailable ? result.unc.U : null, 4)} · R_phy: {fmt(result.physics.available ? result.physics.Rphy : null, 5)}
+          </p>
+          {result.statusReason ? <p className="mt-2 text-sm text-muted-foreground">{result.statusReason}</p> : null}
           <p className="mt-3 text-sm text-muted-foreground">The decision is calculated from CSV measurements, not the filename. Files with identical contents produce identical results even when their names say “under” or “over”.</p>
           <div className="mt-4 flex flex-wrap gap-2">
             {[
@@ -163,9 +150,13 @@ function EventDataPage() {
         </SectionCard>
         <SectionCard
           title="Upload PMU CSV"
-          subtitle="Header row plus one numeric row per sample. Recognised columns: t/time, V, theta, f, I, P, Q."
+          subtitle="Header row plus PMU samples. The backend detects timestamps, locations, phases, magnitudes, angles, frequency and ROCOF."
         >
           <div className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input value={apiUrl} onChange={(event) => setApiUrlState(event.target.value)} aria-label="Python backend URL" className="h-9 text-xs" />
+              <Button type="button" size="sm" variant="outline" onClick={() => { setPmuApiUrl(apiUrl); setUploadMsg(`Backend URL saved: ${apiUrl}`); }} className="text-xs">Save backend URL</Button>
+            </div>
             <input
               ref={fileRef}
               type="file"
@@ -176,13 +167,13 @@ function EventDataPage() {
                 if (f) void onUpload(f);
               }}
             />
-            <Button size="sm" disabled={isAnalyzing} onClick={() => fileRef.current?.click()} className="text-xs">
+            <Button size="sm" disabled={isAnalyzing} onClick={() => { setPmuApiUrl(apiUrl); fileRef.current?.click(); }} className="text-xs">
               {isAnalyzing ? "Analyzing all features…" : "Choose CSV file"}
             </Button>
             {uploadMsg ? <p className="mono-num text-xs text-muted-foreground">{uploadMsg}</p> : null}
             <p className="text-xs text-muted-foreground">
-              Uploaded angles are assumed to be in degrees and are converted to radians before the physics check; set the
-              nominal frequency in Advanced settings on the Reliability page to match the dataset.
+              The Python backend detects degree/radian angle units, converts to radians and unwraps phase before
+              differentiation. Set nominal frequency f₀ in Advanced settings on the Reliability page to match the dataset.
             </p>
           </div>
         </SectionCard>
@@ -215,6 +206,23 @@ function EventDataPage() {
           ]}
         />
       </SectionCard>
+
+      {event.backendAnalysis ? (
+        <SectionCard title="Backend dataset inspection" subtitle="Automatically detected from the uploaded CSV; no filename-derived label is used.">
+          <KeyValue
+            items={[
+              { k: "Model status", v: event.backendAnalysis.model.status },
+              { k: "Detected PMU locations", v: event.backendAnalysis.inspection.pmu_locations.join(", ") || "not encoded in headers" },
+              { k: "Detected phases", v: event.backendAnalysis.inspection.phases.join(", ") || "not encoded in headers" },
+              { k: "Detected feature columns", v: event.backendAnalysis.inspection.feature_names.join(", ") },
+              { k: "Sampling interval", v: `${event.backendAnalysis.inspection.sampling_interval_ms.toFixed(3)} ms (${event.backendAnalysis.inspection.sampling_rate_hz.toFixed(2)} Hz)` },
+              { k: "Detected angle unit", v: event.backendAnalysis.inspection.angle_unit_detected ?? "no angle column" },
+              { k: "Missing values filled", v: `${event.backendAnalysis.inspection.missing_values_filled}` },
+              { k: "Valid stability label", v: event.backendAnalysis.inspection.label ?? "not available" },
+            ]}
+          />
+        </SectionCard>
+      ) : null}
 
       <SectionCard
         title="Preprocessing pipeline"

@@ -30,6 +30,7 @@ export interface PmuEvent {
     upper90Hz: number;
     eventClass: "normal" | "under-frequency" | "over-frequency";
   };
+  backendAnalysis?: import("./backend").BackendAnalysis;
 }
 
 export interface PipelineConfig {

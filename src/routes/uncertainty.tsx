@@ -1,23 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { usePmu } from "@/lib/pmu/store";
-import { histogram } from "@/lib/pmu/uncertainty";
-import { HistogramChart, RunsChart } from "@/components/pmu/charts";
 import { AdvancedSettings } from "@/components/pmu/controls";
-import { DemoNotice, Formula, MetricCard, PageHeader, SectionCard, fmt } from "@/components/pmu/ui";
+import { Formula, MetricCard, ModelStatusNotice, PageHeader, SectionCard, fmt } from "@/components/pmu/ui";
 
 export const Route = createFileRoute("/uncertainty")({
   head: () => ({
     meta: [
-      { title: "Predictive Uncertainty — MC Dropout Analysis" },
+      { title: "Evidential Uncertainty — PMU Stability Analysis" },
       {
         name: "description",
         content:
-          "Monte-Carlo dropout over K stochastic forward passes gives the mean instability probability and its predictive variance, the first ingredient of the reliability score.",
+          "The CfC evidential head returns class evidence, Dirichlet probabilities and total evidential uncertainty for the reliability score.",
       },
-      { property: "og:title", content: "Predictive Uncertainty — MC Dropout" },
+      { property: "og:title", content: "Evidential Uncertainty — PMU Stability Analysis" },
       {
         property: "og:description",
-        content: "Per-run probabilities, their distribution, and how variance feeds the physics-calibrated reliability score.",
+        content: "Class evidence, probability, and how evidential uncertainty feeds the physics-calibrated reliability score.",
       },
     ],
   }),
@@ -25,79 +23,63 @@ export const Route = createFileRoute("/uncertainty")({
 });
 
 function UncertaintyPage() {
-  const { result, cfg } = usePmu();
-  const { samples, pbar, U, std, K } = result.unc;
-  const spread: [number, number] = [Math.min(...samples), Math.max(...samples)];
-  const level = U > cfg.U0 * 1.5 ? "high" : U > cfg.U0 * 0.5 ? "moderate" : "low";
+  const { result } = usePmu();
+  const { pbar, U } = result.unc;
+  const level = !result.modelOutputAvailable ? "unavailable" : U > 0.5 ? "high" : U > 0.25 ? "moderate" : "low";
 
   return (
     <>
       <PageHeader
         eyebrow="Uncertainty quantification"
-        title="Monte-Carlo Dropout Predictive Variance"
-        description="Dropout stays active at inference time, so each forward pass samples a different sub-network. The spread of the resulting probabilities is a practical proxy for epistemic uncertainty: a confident model returns tightly clustered probabilities, an out-of-distribution or under-determined input does not."
+        title="Evidential Learning Uncertainty"
+        description="The CfC evidential head returns non-negative class evidence. Dirichlet strength determines both Stable/Unstable probabilities and the total evidential uncertainty U_evi."
       />
+      <ModelStatusNotice status={result.modelStatus} reason={result.statusReason} />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard label="Mean probability p̄" value={fmt(pbar)} hint="Average over K stochastic passes" />
+        <MetricCard label="P(Stable)" value={fmt(result.modelOutputAvailable ? 1 - pbar : null)} hint="α_stable / Σα" />
         <MetricCard
-          label="Predictive variance U"
-          value={fmt(U, 5)}
-          hint={`${level} relative to U₀ = ${cfg.U0}`}
+          label="P(Unstable)"
+          value={fmt(result.modelOutputAvailable ? pbar : null)}
+          hint="α_unstable / Σα"
+        />
+        <MetricCard
+          label="Evidential uncertainty U_evi"
+          value={fmt(result.modelOutputAvailable ? U : null, 5)}
+          hint={`${level} uncertainty`}
           tone={level === "high" ? "uncertain" : "neutral"}
         />
-        <MetricCard label="Standard deviation" value={fmt(std, 4)} hint="√U, on the probability scale" />
-        <MetricCard label="Sample range" value={`${fmt(spread[0])} – ${fmt(spread[1])}`} hint={`min / max over ${K} runs`} />
+        <MetricCard label="Model status" value={result.modelStatus} hint="probabilities require labelled training" />
       </div>
 
-      <SectionCard title="Estimator" subtitle="Dropout remains enabled during inference; K passes are drawn from the same weights.">
+      <SectionCard title="Evidential estimator" subtitle="A two-class Dirichlet distribution is formed directly from the CfC output head.">
         <div className="space-y-3">
-          <Formula label="Mean predictive probability over K stochastic forward passes.">
-            p̄ = (1/K) Σ_{"{"}k=1{"}"}^K p_k,&nbsp;&nbsp;p_k = f_θ^{"{"}dropout{"}"}(X)
+          <Formula label="The softplus head guarantees non-negative evidence.">
+            e_k ≥ 0,&nbsp;&nbsp;α_k = e_k + 1
           </Formula>
-          <Formula label="Predictive variance used as the uncertainty measure U.">
-            U = (1/K) Σ_{"{"}k=1{"}"}^K (p_k − p̄)²
+          <Formula label="Class probability and total uncertainty for K=2 classes.">
+            p_k = α_k / Σ_j α_j,&nbsp;&nbsp;U_evi = 2 / Σ_j α_j
           </Formula>
           <p className="text-sm text-muted-foreground">
-            The demonstration uses K = {K} passes with dropout rate {cfg.dropout}. Each pass is seeded deterministically so
-            reloading the page reproduces exactly the same distribution — a convenience for inspection, not a claim that
-            uncertainty is deterministic in general.
+            Low total evidence produces U_evi near one. Strong accumulated evidence increases Σα and lowers U_evi.
           </p>
         </div>
       </SectionCard>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <SectionCard title="Per-run probabilities" subtitle="Each dot is one stochastic forward pass; the dashed line is p̄.">
-          <RunsChart samples={samples} mean={pbar} height={210} />
-        </SectionCard>
-        <SectionCard title="Distribution of p_k" subtitle="Histogram over the K sampled probabilities.">
-          <HistogramChart data={histogram(samples, 12)} height={210} />
-        </SectionCard>
-      </div>
-
-      <SectionCard title="Effect on the decision" subtitle="Uncertainty enters the reliability score through the normalised term Ũ.">
+      <SectionCard title="Effect on the decision" subtitle="Evidential uncertainty enters the reliability score directly.">
         <div className="space-y-3">
-          <Formula label="Bounded normalisation keeps Ũ ∈ [0,1) with the scale U₀ set from validation data.">
-            Ũ = U / (U + U₀) = {fmt(U, 5)} / ({fmt(U, 5)} + {cfg.U0}) = {fmt(result.rel.Utilde, 4)}
+          <Formula label="The uncertainty penalty is calibrated on validation data.">
+            exp(−α_rel·U_evi) = exp(−α_rel·{fmt(result.modelOutputAvailable ? U : null, 4)})
           </Formula>
           <p className="text-sm text-muted-foreground">
-            With α = {cfg.alpha}, the uncertainty term alone multiplies the confidence margin by exp(−α·Ũ) ={" "}
-            <span className="mono-num">{fmt(Math.exp(-cfg.alpha * result.rel.Utilde), 4)}</span>. High variance therefore
-            cannot be hidden behind a decisive-looking probability: it directly suppresses the reliability score and pushes
-            the output toward <em>Uncertain</em>.
+            When calibration is unavailable, the backend withholds S_rel and returns Uncertain instead of applying frontend placeholder constants.
           </p>
         </div>
       </SectionCard>
 
-      <SectionCard title="Advanced settings" subtitle="Change K, the dropout rate or the U₀ scale and watch the distribution respond.">
+      <SectionCard title="Display and nominal-system settings" subtitle="Nominal frequency remains configurable; trained calibration values come from the backend artifact.">
         <AdvancedSettings />
       </SectionCard>
-
-      <DemoNotice>
-        Because the encoder is untrained, the variance shown here reflects the sensitivity of a randomly initialised
-        network to dropout masks. The estimator is the one described in the method; the numbers are illustrative and are
-        not calibrated uncertainty from a trained model.
-      </DemoNotice>
     </>
   );
 }

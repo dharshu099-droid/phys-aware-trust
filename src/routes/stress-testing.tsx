@@ -4,7 +4,7 @@ import { usePmu } from "@/lib/pmu/store";
 import { runInference } from "@/lib/pmu/inference";
 import { ChannelMask, NoiseControl } from "@/components/pmu/controls";
 import { MultiLineChart } from "@/components/pmu/charts";
-import { DecisionBadge, DemoNotice, MetricCard, PageHeader, SectionCard, fmt } from "@/components/pmu/ui";
+import { DecisionBadge, DemoNotice, MetricCard, ModelStatusNotice, PageHeader, SectionCard, fmt } from "@/components/pmu/ui";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CHANNELS, type ChannelKey } from "@/lib/pmu/types";
 
@@ -60,6 +60,7 @@ function StressPage() {
         title="Noise Robustness and Missing-Channel Behaviour"
         description="A reliability claim is only meaningful if it degrades gracefully. Here the same event is re-analysed under additive measurement noise and under the loss of individual PMU channels, so you can see whether the framework becomes quietly overconfident or correctly moves toward abstention."
       />
+      <ModelStatusNotice status={result.modelStatus} reason={result.statusReason} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <SectionCard title="Measurement noise" subtitle="Zero-mean Gaussian noise scaled per channel by its own standard deviation.">
@@ -168,8 +169,8 @@ function StressPage() {
       </SectionCard>
 
       <DemoNotice>
-        These sweeps are mechanism demonstrations on a single illustrative record with an untrained encoder. They show how
-        the reliability score responds to degraded inputs; they are not a robustness evaluation, which would require a
+        Counterfactual noise and channel-removal sweeps are shown only as mechanism demonstrations. Uploaded records are
+        never assigned new probabilities by the browser: a valid robustness evaluation requires backend inference from a
         trained model and a labelled test set across many events and operating points.
       </DemoNotice>
     </>

@@ -1,4 +1,36 @@
-# Reliable Grid Insights
+# Physics-Calibrated Evidential CfC
+
+The existing React frontend is connected to a FastAPI + PyTorch + `ncps` backend for PMU transient-stability research. The backend is dataset-agnostic, calculates the phase-frequency physics residual independently, and refuses to create classifier outputs when labelled training or calibration data is unavailable.
+
+## Run locally
+
+```powershell
+python -m pip install -r requirements.txt
+python -m uvicorn pmu_backend.main:app --host 127.0.0.1 --port 8000
+```
+
+In another terminal:
+
+```powershell
+npm install
+npm run dev
+```
+
+Open the PMU Event Data page, confirm the Python backend URL, and upload a CSV. API documentation is available at `http://127.0.0.1:8000/docs`.
+
+Backend endpoints:
+
+- `POST /dataset/inspect`
+- `POST /physics-residual`
+- `POST /train`
+- `POST /calibrate`
+- `POST /predict` and `/predict/windows`
+- `POST /evaluate`
+- `POST /stream/emulate`
+
+Training requires unique event files with an explicit event-level `Stable`/`Unstable` or `0`/`1` label column and both classes. Labels are never inferred from filenames. Without a trained model the API returns `UNTRAINED`, omits probabilities, and still returns inspection and `R_phy`.
+
+## Original frontend brief
 
 Build a complete interactive research prototype titled:
 

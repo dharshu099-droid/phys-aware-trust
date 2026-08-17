@@ -45,8 +45,13 @@ export function physicsResidual(
   const freqImplied: number[] = [];
   const residuals: number[] = [];
   const t: number[] = [];
+  const theta = seq.X.map((row) => row[iTheta]! * k);
+  for (let i = 1; i < theta.length; i++) {
+    while (theta[i]! - theta[i - 1]! > Math.PI) theta[i] = theta[i]! - 2 * Math.PI;
+    while (theta[i]! - theta[i - 1]! < -Math.PI) theta[i] = theta[i]! + 2 * Math.PI;
+  }
   for (let i = 0; i < seq.X.length - 1; i++) {
-    const d = ((seq.X[i + 1]![iTheta]! - seq.X[i]![iTheta]!) * k) / opts.dt;
+    const d = (theta[i + 1]! - theta[i]!) / opts.dt;
     const impl = 2 * Math.PI * (seq.X[i]![iF]! - opts.f0);
     thetaDot.push(d);
     freqImplied.push(impl);

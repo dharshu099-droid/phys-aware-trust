@@ -199,3 +199,25 @@ export function fmt(v: number | null | undefined, digits = 3) {
   if (v === null || v === undefined || !Number.isFinite(v)) return "n/a";
   return v.toFixed(digits);
 }
+
+export function ModelStatusNotice({
+  status,
+  reason,
+}: {
+  status: "DEMO" | "UNTRAINED" | "TRAINED_UNCALIBRATED" | "READY";
+  reason?: string;
+}) {
+  if (status === "READY") return null;
+  const copy =
+    status === "UNTRAINED"
+      ? "No valid labelled Stable/Unstable model artifact is loaded. Model probabilities and performance values are unavailable; preprocessing and the independent physics residual remain active."
+      : status === "TRAINED_UNCALIBRATED"
+        ? "The CfC model is trained, but reliability parameters and decision thresholds have not been calibrated on validation data. The final decision is withheld as Uncertain."
+        : "This built-in record is an illustrative browser demonstration. Upload a CSV to use the Python backend.";
+  return (
+    <div className="rounded-md border border-uncertain/50 bg-uncertain/10 px-4 py-3 text-sm text-foreground">
+      <strong className="mr-2">Model status: {status}</strong>
+      {reason ?? copy}
+    </div>
+  );
+}

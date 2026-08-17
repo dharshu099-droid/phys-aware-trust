@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { usePmu } from "@/lib/pmu/store";
 import { FlowDiagram } from "@/components/pmu/flow";
 import { ReliabilityExplanation } from "@/components/pmu/explanation";
-import { DecisionBanner, DemoNotice, fmt, MetricCard, PageHeader, SectionCard } from "@/components/pmu/ui";
+import { DecisionBanner, DemoNotice, fmt, MetricCard, ModelStatusNotice, PageHeader, SectionCard } from "@/components/pmu/ui";
 import { EventSelector, WindowSelector } from "@/components/pmu/controls";
 import { ProbabilityGauge } from "@/components/pmu/charts";
 import { Button } from "@/components/ui/button";
@@ -10,13 +10,13 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Overview — Physics-Calibrated Uncertainty-Aware Transformer" },
+      { title: "Overview — Physics-Calibrated Evidential CfC" },
       {
         name: "description",
         content:
-          "End-to-end research demonstration: PMU measurements, Transformer inference, MC dropout uncertainty, PMU physics consistency and a physics-calibrated reliability decision.",
+          "End-to-end PMU pipeline: CfC temporal inference, evidential uncertainty, PMU physics consistency and a calibrated reliability decision.",
       },
-      { property: "og:title", content: "Overview — Physics-Calibrated Uncertainty-Aware Transformer" },
+      { property: "og:title", content: "Overview — Physics-Calibrated Evidential CfC" },
       {
         property: "og:description",
         content: "Follow one PMU event from raw synchrophasor data to a Stable / Unstable / Uncertain decision.",
@@ -41,17 +41,17 @@ function Overview() {
     <>
       <PageHeader
         eyebrow="Overview"
-        title="Physics-Calibrated Uncertainty-Aware Transformer for Reliable Early Power-System Stability Assessment"
-        description="A high AI probability is not automatically treated as trustworthy. This prototype calibrates an early Transformer prediction with both predictive uncertainty and PMU-derived physical consistency before a stability decision is accepted. Research demonstration for control-centre decision support only."
+        title="Physics-Calibrated Evidential CfC for Reliable Early Transient Stability Assessment"
+        description="A Python CfC model and evidential head produce class probabilities and uncertainty only when valid labelled training exists. Independent PMU physics consistency and calibrated reliability determine whether the output is Stable, Unstable or Uncertain."
       />
+      <ModelStatusNotice status={result.modelStatus} reason={result.statusReason} />
 
       <DemoNotice>
         <strong>Illustrative software demo.</strong> The selected record is “{event.name}”.{" "}
         {event.origin === "demo"
           ? "Built-in waveforms are synthetic Illustrative Demo PMU Events generated in the browser — they are not Transmission Signature Library (TSL) records and not field measurements."
           : "This is an uploaded CSV; the application does not verify its provenance."}{" "}
-        Model weights are deterministically initialised and <strong>not trained</strong> on labelled transient-stability
-        data, so every number below is a transparent demo value — never an experimental result.
+        {event.origin === "demo" ? " Values for built-in records are illustrative only." : " Backend model status and measured physics outputs are reported without creating missing labels or probabilities."}
       </DemoNotice>
 
       <div className="grid gap-4 lg:grid-cols-[2fr_3fr]">
@@ -76,8 +76,8 @@ function Overview() {
             </div>
           </div>
         </SectionCard>
-        <SectionCard title="Instability probability gauge" subtitle="p̄ = mean over K MC dropout passes.">
-          <ProbabilityGauge p={unc.pbar} />
+        <SectionCard title="Instability probability gauge" subtitle="P(Unstable) from the evidential CfC head.">
+          {result.modelOutputAvailable ? <ProbabilityGauge p={unc.pbar} /> : <p className="py-16 text-center text-4xl font-semibold text-muted-foreground">N/A</p>}
           <p className="mt-1 text-center text-xs text-muted-foreground">
             near 0 → more stable · near 1 → more unstable · near 0.5 → ambiguous
           </p>
@@ -87,15 +87,15 @@ function Overview() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <MetricCard
           label="Instability probability"
-          value={fmt(unc.pbar)}
-          hint="Mean instability probability p̄ over the K stochastic forward passes."
+          value={fmt(result.modelOutputAvailable ? unc.pbar : null)}
+          hint="P(Unstable) = α_unstable / Σα."
           tone={unc.pbar >= cfg.tauU ? "unstable" : unc.pbar <= cfg.tauS ? "stable" : "uncertain"}
         />
         <MetricCard
-          label="Predictive uncertainty"
-          value={fmt(unc.U, 5)}
-          hint="U = (1/K) Σ (p_k − p̄)², the variance of the MC dropout predictions."
-          footer={`K = ${unc.K} passes`}
+          label="Evidential uncertainty"
+          value={fmt(result.modelOutputAvailable ? unc.U : null, 5)}
+          hint="U_evi = 2 / Σα from the evidential head."
+          footer={`model ${result.modelStatus}`}
         />
         <MetricCard
           label="Physics residual"
@@ -107,14 +107,14 @@ function Overview() {
         <MetricCard
           label="Reliability score"
           value={fmt(rel.Srel)}
-          hint="S_rel = C·exp(−α·Ũ − β·R̃_phy), where C = 2|p̄ − 0.5|."
-          footer={`τr = ${cfg.tauR.toFixed(2)}`}
+          hint="S_rel = C·exp(−α_rel·U_evi − β_rel·R̃_phy)."
+          footer="parameters from backend calibration"
         />
         <MetricCard
           label="Final decision"
           value={rel.decision}
           tone={rel.decision === "Stable" ? "stable" : rel.decision === "Unstable" ? "unstable" : "uncertain"}
-          footer={`inference ${result.latencyMs.toFixed(1)} ms in-browser`}
+          footer={result.source === "backend" ? "Python backend output" : "illustrative browser output"}
         />
       </div>
 

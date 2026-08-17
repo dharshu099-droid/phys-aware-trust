@@ -18,7 +18,7 @@ export const FLOW: FlowBlock[] = [
   {
     id: "prep",
     title: "Preprocessing & Observation Window Selection",
-    equation: "resample → gap detection → cleaning → z-score → [t_e, t_e + W]",
+    equation: "timestamps → gaps → deg→rad → unwrap → z-score → [t_e, t_e + W]",
     detail:
       "Uniform time synchronisation, missing-value detection and interpolation, per-channel standardisation, then extraction of the early observation window W ∈ {100, 200, 300, 500} ms after the disturbance onset.",
   },
@@ -31,23 +31,22 @@ export const FLOW: FlowBlock[] = [
   },
   {
     id: "encoder",
-    title: "Transformer Encoder",
-    equation: "Attention(Q,K,V) = softmax(QKᵀ/√d_k)·V",
-    detail:
-      "Input projection → sinusoidal positional encoding → 2 encoder layers, 4 heads, d_model = 64, dropout 0.2 → temporal mean pooling.",
+    title: "CfC Temporal Model",
+    equation: "h_T = CfC(X, Δt)",
+    detail: "The ncps Closed-form Continuous-time layer models the irregular temporal response and returns the final hidden state.",
   },
   {
     id: "head",
-    title: "Stability Prediction Head",
-    equation: "p = P(Unstable | X)",
-    detail: "Binary classification head producing an instability probability. This value alone never decides the output.",
+    title: "Evidential Output Head",
+    equation: "e_k≥0, α_k=e_k+1, p_k=α_k/Σα",
+    detail: "Returns Stable/Unstable class evidence and probabilities only from a valid trained artifact.",
     branch: true,
   },
   {
     id: "mc",
-    title: "MC Dropout Uncertainty",
-    equation: "p̄ = (1/K)Σ p_k,  U = (1/K)Σ (p_k − p̄)²",
-    detail: "Dropout stays active at inference; K stochastic forward passes give the predictive mean and variance.",
+    title: "Evidential Uncertainty",
+    equation: "U_evi = 2/Σα",
+    detail: "Low Dirichlet strength produces high evidential uncertainty without repeated stochastic passes.",
     branch: true,
   },
   {
@@ -61,14 +60,14 @@ export const FLOW: FlowBlock[] = [
   {
     id: "rel",
     title: "Physics-Calibrated Reliability Assessment",
-    equation: "S_rel = C·exp(−α·Ũ − β·R̃_phy),  C = 2|p̄ − 0.5|",
+    equation: "S_rel = C·exp(−α_rel·U_evi − β_rel·R̃_phy),  C = 2|P_u − 0.5|",
     detail:
       "Central contribution: base model confidence is discounted by normalised predictive uncertainty and normalised physical inconsistency.",
   },
   {
     id: "decision",
     title: "Stable / Unstable / Uncertain",
-    equation: "ŷ = Stable if p̄ ≤ τs ∧ S_rel ≥ τr; Unstable if p̄ ≥ τu ∧ S_rel ≥ τr; else Uncertain",
+    equation: "ŷ = Stable if P_u ≤ τs ∧ S_rel ≥ τr; Unstable if P_u ≥ τu ∧ S_rel ≥ τr; else Uncertain",
     detail: "A three-way outcome with explicit abstention instead of a forced binary decision.",
   },
   {

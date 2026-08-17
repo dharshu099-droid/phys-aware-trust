@@ -9,7 +9,7 @@ export const Route = createFileRoute("/architecture")({
       {
         name: "description",
         content:
-          "End-to-end architecture: PMU input, preprocessing, early observation window, Transformer encoder, MC dropout, physics consistency, reliability score and final decision.",
+          "End-to-end architecture: PMU input, preprocessing, early observation window, evidential CfC, physics consistency, reliability score and final decision.",
       },
       { property: "og:title", content: "System Architecture" },
       {
@@ -27,7 +27,7 @@ function ArchitecturePage() {
       <PageHeader
         eyebrow="Architecture"
         title="From PMU Measurements to a Reliable Stability Decision"
-        description="Select any block to see what it consumes, what it produces and what it can refuse to answer. The two branches after the encoder — stochastic uncertainty and PMU physics consistency — are combined only at the reliability stage, so neither can be silently dominated by a confident-looking probability."
+        description="The Python backend detects the PMU schema, preprocesses each event, applies an evidential CfC when a trained artifact exists, calculates physics consistency independently, and abstains whenever probabilities or calibrated reliability are unavailable."
       />
 
       <SectionCard title="Pipeline" subtitle="Click a block for its contract and current output.">
@@ -43,12 +43,12 @@ function ArchitecturePage() {
               still useful.
             </li>
             <li>
-              <strong className="text-foreground">Attention over recurrence.</strong> Self-attention relates any two
-              samples in the window directly, which suits multivariate synchrophasor sequences with short, sharp events.
+              <strong className="text-foreground">Continuous-time temporal model.</strong> CfC dynamics represent the
+              evolving multivariate PMU response while retaining the event sampling interval.
             </li>
             <li>
-              <strong className="text-foreground">Uncertainty before action.</strong> MC dropout turns a point probability
-              into a distribution, so instability of the prediction itself becomes visible.
+              <strong className="text-foreground">Evidence before action.</strong> The Dirichlet head produces class
+              evidence, probabilities and U_evi together, so weak total evidence is explicit.
             </li>
             <li>
               <strong className="text-foreground">Physics as a calibrator.</strong> The phase-frequency residual audits
@@ -64,15 +64,14 @@ function ArchitecturePage() {
         <SectionCard title="Implementation map" subtitle="Reference research stack and this deployment.">
           <KeyValue
             items={[
-              { k: "Reference backend", v: "FastAPI + PyTorch (nn.TransformerEncoder), NumPy, Pandas" },
-              { k: "This deployment", v: "TanStack Start + React + TypeScript, in-browser reimplementation" },
-              { k: "Data loading", v: "src/lib/pmu/dataLoader.ts — demo events and CSV ingest" },
-              { k: "Preprocessing", v: "src/lib/pmu/preprocessing.ts — sync, cleaning, resampling, z-score, windowing" },
-              { k: "Model", v: "src/lib/pmu/transformerModel.ts — projection, positional encoding, attention, head" },
-              { k: "Uncertainty", v: "src/lib/pmu/uncertainty.ts — MC dropout aggregation" },
-              { k: "Physics", v: "src/lib/pmu/physics.ts — dθ/dt vs 2π(f − f₀) residual" },
-              { k: "Reliability", v: "src/lib/pmu/reliability.ts — S_rel and the decision rule" },
-              { k: "Orchestration", v: "src/lib/pmu/inference.ts — single pass and window sweeps" },
+              { k: "Backend", v: "FastAPI + PyTorch + ncps CfC + Pandas/NumPy/scikit-learn" },
+              { k: "Frontend", v: "Existing TanStack Start + React interface" },
+              { k: "Data inspection", v: "pmu_backend/preprocessing.py — schema, locations, phases, sampling" },
+              { k: "Preprocessing", v: "timestamps, missing values, radians, unwrap, normalization, windows" },
+              { k: "Model", v: "pmu_backend/model.py — CfC + two-class evidential head" },
+              { k: "Training/calibration", v: "pmu_backend/service.py — labelled events only" },
+              { k: "Physics", v: "independent dθ/dt − 2π(f−f₀) residual" },
+              { k: "API", v: "inspection, physics, train, calibrate, predict, evaluate, stream emulator" },
               { k: "Charts", v: "Recharts" },
             ]}
           />
@@ -80,9 +79,8 @@ function ArchitecturePage() {
       </div>
 
       <DemoNotice>
-        The architecture is faithful to the method, but this environment provides no Python runtime and no trained
-        checkpoint. Every stage therefore runs as a deterministic in-browser reimplementation over illustrative demo
-        events or user-supplied CSV data, and the outputs are mechanism demonstrations rather than experimental results.
+        The backend never derives stability labels from filenames. Without explicit labelled events and a calibrated
+        artifact, it remains UNTRAINED and returns no class probability, accuracy or reliability value.
       </DemoNotice>
     </>
   );

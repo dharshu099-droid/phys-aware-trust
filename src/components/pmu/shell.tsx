@@ -27,7 +27,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             Research prototype
           </p>
           <p className="mt-2 text-sm font-semibold leading-snug">
-            Physics-Calibrated Uncertainty-Aware Transformer
+            Physics-Calibrated Evidential CfC
           </p>
           <p className="mt-1 text-xs text-sidebar-foreground/70">
             Reliable early power-system stability assessment
@@ -56,7 +56,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="mt-2 flex items-center gap-2">
             <DecisionBadge decision={result.rel.decision} />
             <span className="mono-num text-[11px] text-sidebar-foreground/75">
-              p̄ {result.unc.pbar.toFixed(2)} · S {result.rel.Srel.toFixed(2)}
+              {result.modelOutputAvailable
+                ? `Pᵤ ${result.unc.pbar.toFixed(2)} · S ${Number.isFinite(result.rel.Srel) ? result.rel.Srel.toFixed(2) : "n/a"}`
+                : result.modelStatus}
             </span>
           </div>
           {event.modelPrediction ? (

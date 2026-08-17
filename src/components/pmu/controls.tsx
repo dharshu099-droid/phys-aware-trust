@@ -173,12 +173,20 @@ export function NoiseControl() {
 }
 
 function AdvancedSettingsBody() {
-  const { cfg, setCfg } = usePmu();
+  const { cfg, setCfg, event } = usePmu();
+  if (event.origin === "upload") {
+    return (
+      <div className="space-y-2 text-sm text-muted-foreground">
+        <p>For uploaded data, α_rel, β_rel, R₀ and all decision thresholds are read from the backend validation artifact and cannot be replaced by browser values.</p>
+        <p>Current nominal frequency: <span className="mono-num text-foreground">{cfg.nominalFrequency} Hz</span>. Select the correct nominal system before uploading the CSV so the backend recalculates every window consistently.</p>
+      </div>
+    );
+  }
   return (
     <div className="space-y-5">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <NumField label="MC dropout passes K" value={cfg.K} step={1} min={2} max={200} onChange={(K) => setCfg({ K: Math.round(K) })} />
-        <NumField label="Dropout rate" value={cfg.dropout} step={0.05} min={0} max={0.8} onChange={(dropout) => setCfg({ dropout })} />
+        <NumField label="Illustrative demo passes" value={cfg.K} step={1} min={2} max={200} onChange={(K) => setCfg({ K: Math.round(K) })} />
+        <NumField label="Illustrative demo variation" value={cfg.dropout} step={0.05} min={0} max={0.8} onChange={(dropout) => setCfg({ dropout })} />
         <NumField label="Random seed" value={cfg.seed} step={1} onChange={(seed) => setCfg({ seed: Math.round(seed) })} />
         <div className="space-y-1">
           <Label className="text-[11px] uppercase tracking-[0.1em] text-muted-foreground">Nominal frequency f₀</Label>
@@ -209,8 +217,8 @@ function AdvancedSettingsBody() {
         <NumField label="τr (min. reliability)" value={cfg.tauR} min={0} max={1} onChange={(tauR) => setCfg({ tauR })} />
       </div>
       <p className="text-xs text-muted-foreground">
-        All thresholds and scaling constants are configurable placeholders. They must be selected on a validation split
-        of a labelled dataset before any performance claim is made; they are not universal constants.
+        These controls affect built-in illustrative records only. Real uploaded-file thresholds and scaling constants are
+        accepted only from backend calibration on a labelled validation split; they are not universal constants.
       </p>
     </div>
   );

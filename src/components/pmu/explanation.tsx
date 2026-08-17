@@ -17,7 +17,7 @@ export function reliabilityNarrative(args: {
   if (decision !== "Uncertain") {
     return `The encoder identified an early disturbance pattern associated with ${direction} (mean instability probability ${pbar.toFixed(
       2,
-    )}). Repeated stochastic forward passes remained consistent, and ${
+    )}). Evidential uncertainty was sufficiently low, and ${
       physicsAvailable
         ? `the measured phase-frequency behaviour showed ${band} physical deviation`
         : "no phase/frequency physics check was available, so no physical penalty was applied"
@@ -34,7 +34,7 @@ export function reliabilityNarrative(args: {
   }
   return `The classification probability was decisive (${pbar.toFixed(
     2,
-  )}), but stochastic disagreement across the MC dropout passes ${
+  )}), but evidential uncertainty ${
     physicsAvailable ? `and/or ${band} phase-frequency inconsistency ` : ""
   }reduced the reliability score to ${Srel.toFixed(2)}, below τr = ${tauR.toFixed(
     2,
@@ -44,12 +44,12 @@ export function reliabilityNarrative(args: {
 export function ReliabilityExplanation() {
   const { result, cfg } = usePmu();
   const { unc, physics, rel } = result;
-  const uncLabel = unc.U <= cfg.U0 / 2 ? "Low" : unc.U <= cfg.U0 * 2 ? "Moderate" : "High";
+  const uncLabel = !result.modelOutputAvailable ? "Unavailable" : unc.U <= 0.25 ? "Low" : unc.U <= 0.5 ? "Moderate" : "High";
   const relLabel = rel.Srel >= cfg.tauR ? (rel.Srel >= 0.75 ? "High" : "Sufficient") : "Insufficient";
 
   const rows = [
-    { stage: "Transformer", finding: `Instability probability = ${(unc.pbar * 100).toFixed(0)}%` },
-    { stage: "MC Dropout", finding: `Predictive uncertainty = ${uncLabel} (U = ${fmt(unc.U, 5)})` },
+    { stage: "CfC", finding: `Instability probability = ${result.modelOutputAvailable ? `${(unc.pbar * 100).toFixed(0)}%` : "unavailable"}` },
+    { stage: "Evidential", finding: `Evidential uncertainty = ${uncLabel} (U_evi = ${fmt(unc.U, 5)})` },
     {
       stage: "PMU Physics",
       finding: physics.available
@@ -76,7 +76,7 @@ export function ReliabilityExplanation() {
         ))}
       </ul>
       <p className="mt-4 rounded-md bg-secondary/70 px-4 py-3 text-sm leading-relaxed text-foreground/85">
-        {reliabilityNarrative({
+        {!result.modelOutputAvailable ? result.statusReason ?? "The backend withheld model probabilities because no valid trained and calibrated artifact is available." : reliabilityNarrative({
           pbar: unc.pbar,
           U: unc.U,
           physicsAvailable: physics.available,

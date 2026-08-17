@@ -3,7 +3,7 @@ import { usePmu } from "@/lib/pmu/store";
 import { PHYSICS_BANDS } from "@/lib/pmu/inference";
 import { ChannelMask } from "@/components/pmu/controls";
 import { MultiLineChart, SignalChart } from "@/components/pmu/charts";
-import { DemoNotice, Formula, MetricCard, PageHeader, SectionCard, fmt } from "@/components/pmu/ui";
+import { DemoNotice, Formula, MetricCard, ModelStatusNotice, PageHeader, SectionCard, fmt } from "@/components/pmu/ui";
 
 export const Route = createFileRoute("/physics-consistency")({
   head: () => ({
@@ -42,6 +42,7 @@ function PhysicsPage() {
         title="Phase-Angle Rate versus Measured Frequency"
         description="Synchrophasor measurements must satisfy an internal relation: the time derivative of the voltage phase angle tracks the frequency deviation from nominal. When the two disagree, the observation itself is suspect — bad data, a sensor fault or a numerically difficult transient — and the model's confidence should be discounted regardless of how decisive its probability looks."
       />
+      <ModelStatusNotice status={result.modelStatus} reason={result.statusReason} />
 
       <SectionCard title="Consistency relation" subtitle="Finite-difference derivative against the PMU-reported frequency.">
         <div className="space-y-3">

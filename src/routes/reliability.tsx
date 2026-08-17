@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { usePmu } from "@/lib/pmu/store";
 import { AdvancedSettings } from "@/components/pmu/controls";
 import { ReliabilityExplanation } from "@/components/pmu/explanation";
-import { DecisionBanner, DemoNotice, Formula, MetricCard, PageHeader, SectionCard, fmt } from "@/components/pmu/ui";
+import { DecisionBanner, DemoNotice, Formula, MetricCard, ModelStatusNotice, PageHeader, SectionCard, fmt } from "@/components/pmu/ui";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export const Route = createFileRoute("/reliability")({
@@ -25,10 +25,17 @@ export const Route = createFileRoute("/reliability")({
 });
 
 function ReliabilityPage() {
-  const { result, cfg } = usePmu();
+  const { result, cfg, event } = usePmu();
   const { C, Utilde, Rtilde, Srel, decision } = result.rel;
   const pbar = result.unc.pbar;
-  const penalty = cfg.alpha * Utilde + cfg.beta * (Rtilde ?? 0);
+  const backend = event.backendAnalysis?.windows[String(cfg.windowMs)];
+  const calibration = backend?.calibration;
+  const alpha = calibration?.alpha_rel ?? cfg.alpha;
+  const beta = calibration?.beta_rel ?? cfg.beta;
+  const tauStable = calibration?.tau_stable ?? cfg.tauS;
+  const tauUnstable = calibration?.tau_unstable ?? cfg.tauU;
+  const tauReliability = calibration?.tau_reliability ?? cfg.tauR;
+  const penalty = alpha * Utilde + beta * (Rtilde ?? 0);
 
   return (
     <>
@@ -37,29 +44,30 @@ function ReliabilityPage() {
         title="Physics-Calibrated Reliability Score and Final Decision"
         description="The reliability score is the core contribution of the method: a decisive probability only survives if the prediction is also stable under dropout sampling and the underlying PMU measurements are physically self-consistent. Anything else is reported as Uncertain and escalated to the operator."
       />
+      <ModelStatusNotice status={result.modelStatus} reason={result.statusReason} />
 
       <DecisionBanner
         decision={decision}
-        message={`Mean instability probability p̄ = ${fmt(pbar)} with reliability score S_rel = ${fmt(Srel)} against τ_R = ${cfg.tauR}.${
+        message={result.modelOutputAvailable ? `Instability probability = ${fmt(pbar)} with reliability score S_rel = ${fmt(Srel)} against τ_R = ${tauReliability}.${
           result.physics.available
             ? ""
             : " Physics-consistency term omitted: the required PMU channels are unavailable for this observation."
-        }`}
+        }` : "A Stable/Unstable probability and reliability score are unavailable. The backend therefore abstains and reports Uncertain."}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard label="Confidence margin C" value={fmt(C)} hint="2·|p̄ − 0.5|" />
-        <MetricCard label="Normalised uncertainty Ũ" value={fmt(Utilde, 4)} hint={`U₀ = ${cfg.U0}`} />
+        <MetricCard label="Evidential uncertainty U_evi" value={fmt(Utilde, 4)} hint="from Dirichlet strength" />
         <MetricCard
           label="Normalised physics residual R̃"
           value={Rtilde === null ? "unavailable" : fmt(Rtilde, 4)}
-          hint={`R₀ = ${cfg.R0}`}
+          hint={`R₀ = ${fmt(calibration?.R0)}`}
         />
         <MetricCard
           label="Reliability score S_rel"
           value={fmt(Srel)}
-          tone={Srel >= cfg.tauR ? "stable" : "uncertain"}
-          hint={`threshold τ_R = ${cfg.tauR}`}
+          tone={Srel >= tauReliability ? "stable" : "uncertain"}
+          hint={`threshold τ_R = ${fmt(calibration?.tau_reliability)}`}
         />
       </div>
 
@@ -69,11 +77,11 @@ function ReliabilityPage() {
             C = 2 · |p̄ − 0.5| = 2 · |{fmt(pbar)} − 0.5| = {fmt(C)}
           </Formula>
           <Formula label="Step 2 — bounded normalisation of the two penalty terms.">
-            Ũ = U / (U + U₀) = {fmt(Utilde, 4)}
+            U_evi = 2 / Σ_k α_k = {fmt(Utilde, 4)}
             {Rtilde === null ? "  ·  R̃ omitted (physics unavailable)" : `  ·  R̃ = R_phy / (R_phy + R₀) = ${fmt(Rtilde, 4)}`}
           </Formula>
           <Formula label="Step 3 — multiplicative penalty on the confidence margin.">
-            S_rel = C · exp( −α·Ũ − β·R̃ ) = {fmt(C)} · exp( −{cfg.alpha}·{fmt(Utilde, 3)} − {cfg.beta}·
+            S_rel = C · exp( −α_rel·U_evi − β_rel·R̃ ) = {fmt(C)} · exp( −{fmt(calibration?.alpha_rel)}·{fmt(Utilde, 3)} − {fmt(calibration?.beta_rel)}·
             {Rtilde === null ? "0" : fmt(Rtilde, 3)} ) = {fmt(Srel)}
           </Formula>
           <p className="mono-num text-xs text-muted-foreground">
@@ -95,17 +103,17 @@ function ReliabilityPage() {
             <TableBody>
               <TableRow>
                 <TableCell className="mono-num text-xs">
-                  p̄ ≤ τ_S ({cfg.tauS}) and S_rel ≥ τ_R ({cfg.tauR})
+                  P_unstable ≤ τ_S ({fmt(tauStable)}) and S_rel ≥ τ_R ({fmt(tauReliability)})
                 </TableCell>
                 <TableCell className="text-xs font-semibold">Stable</TableCell>
-                <TableCell className="text-xs">{pbar <= cfg.tauS && Srel >= cfg.tauR ? "yes" : "no"}</TableCell>
+                <TableCell className="text-xs">{pbar <= tauStable && Srel >= tauReliability ? "yes" : "no"}</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell className="mono-num text-xs">
-                  p̄ ≥ τ_U ({cfg.tauU}) and S_rel ≥ τ_R ({cfg.tauR})
+                  P_unstable ≥ τ_U ({fmt(tauUnstable)}) and S_rel ≥ τ_R ({fmt(tauReliability)})
                 </TableCell>
                 <TableCell className="text-xs font-semibold">Unstable</TableCell>
-                <TableCell className="text-xs">{pbar >= cfg.tauU && Srel >= cfg.tauR ? "yes" : "no"}</TableCell>
+                <TableCell className="text-xs">{pbar >= tauUnstable && Srel >= tauReliability ? "yes" : "no"}</TableCell>
               </TableRow>
               <TableRow>
                 <TableCell className="mono-num text-xs">otherwise</TableCell>
@@ -124,17 +132,11 @@ function ReliabilityPage() {
 
       <ReliabilityExplanation />
 
-      <SectionCard
-        title="Threshold and calibration settings"
-        subtitle="τ_S, τ_U, τ_R, α, β, U₀ and R₀ are configurable so their influence can be examined directly."
-      >
-        <AdvancedSettings />
-      </SectionCard>
+      {event.origin === "demo" ? <SectionCard title="Illustrative settings" subtitle="These controls apply only to the browser demonstration."><AdvancedSettings /></SectionCard> : null}
 
       <DemoNotice>
-        Uploaded records use a physics-informed risk score combining frequency deviation, RoCoF, voltage disturbance,
-        phase–frequency consistency and predictive interval width. Thresholds remain prototype defaults and require
-        validation on distinct labelled stable and unstable recordings before operational accuracy can be claimed.
+        For uploaded records, R₀, α_rel, β_rel and all decision thresholds are accepted only from the Python backend's
+        validation calibration artifact. When that artifact is absent, the application reports Uncertain and displays no invented values.
       </DemoNotice>
     </>
   );

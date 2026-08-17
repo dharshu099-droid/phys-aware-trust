@@ -16,11 +16,15 @@ export interface InferenceResult {
   latencyMs: number;
   activeChannels: ChannelKey[];
   maskedChannels: ChannelKey[];
+  modelStatus: "DEMO" | "UNTRAINED" | "TRAINED_UNCALIBRATED" | "READY";
+  modelOutputAvailable: boolean;
+  source: "illustrative-demo" | "backend";
+  statusReason?: string;
 }
 
 export const PHYSICS_BANDS: [number, number] = [0.35, 1.2];
 
-/** Full pipeline: preprocess -> window -> transformer -> MC dropout -> physics -> reliability. */
+/** Shared display pipeline. Uploaded events consume CfC/evidential backend outputs; built-in events remain clearly illustrative. */
 export function runInference(
   pre: PreprocessResult,
   cfg: PipelineConfig,
@@ -46,7 +50,7 @@ export function runInference(
   }
   const unc = aggregate(samples);
 
-  const physics = physicsResidual(seq, {
+  let physics = physicsResidual(seq, {
     dt: noisy.event.dt,
     f0: cfg.nominalFrequency,
     angleUnit: noisy.event.angleUnit,
@@ -76,7 +80,57 @@ export function runInference(
     unc.samples = Array.from({ length: cfg.K }, () => clamp01(unc.pbar + (rand() + rand() + rand() - 1.5) * unc.std * 12));
   }
 
-  const rel = reliability(unc.pbar, unc.U, physics.available ? physics.Rphy : null, cfg);
+  let rel = reliability(unc.pbar, unc.U, physics.available ? physics.Rphy : null, cfg);
+  const backendEligible = noisePct === 0 && masked.length === 0;
+  const backend = backendEligible ? pre.event.backendAnalysis?.windows[String(windowMs)] : undefined;
+  let modelStatus: InferenceResult["modelStatus"] = pre.event.origin === "demo" ? "DEMO" : (backend?.model_status ?? "UNTRAINED");
+  let modelOutputAvailable = pre.event.origin === "demo";
+  let statusReason: string | undefined;
+  if (backend) {
+    modelStatus = backend.model_status;
+    modelOutputAvailable = backend.P_unstable !== null && backend.U_evi !== null;
+    statusReason = backend.reason;
+    if (backend.physics.available && backend.physics.R_phy !== null) {
+      const residuals = backend.physics.residual_rad_per_s ?? [];
+      physics = {
+        available: true,
+        Rphy: backend.physics.R_phy,
+        residuals,
+        thetaDot: backend.physics.theta_dot_rad_per_s ?? [],
+        freqImplied: backend.physics.frequency_implied_rad_per_s ?? [],
+        t: (backend.physics.time_ms ?? []).map((value) => value / 1000),
+        band: backend.physics.R_phy <= PHYSICS_BANDS[0] ? "low" : backend.physics.R_phy <= PHYSICS_BANDS[1] ? "moderate" : "high",
+      };
+    } else if (!backend.physics.available) {
+      physics = { available: false, reason: backend.physics.reason, Rphy: NaN, residuals: [], thetaDot: [], freqImplied: [], t: [], band: "low" };
+    }
+    if (modelOutputAvailable) {
+      unc.pbar = backend.P_unstable!;
+      unc.U = backend.U_evi!;
+      unc.std = Math.sqrt(Math.max(backend.U_evi!, 0));
+      unc.K = 0;
+      unc.samples = [];
+      rel = {
+        C: 2 * Math.abs(backend.P_unstable! - 0.5),
+        Utilde: backend.U_evi!,
+        Rtilde: backend.R_phy_norm,
+        Srel: backend.S_rel ?? NaN,
+        decision: backend.decision,
+        reasonKey: backend.decision === "Uncertain" ? "low-reliability" : "reliable",
+      };
+    } else {
+      unc.pbar = NaN; unc.U = NaN; unc.std = NaN; unc.K = 0; unc.samples = [];
+      rel = { C: NaN, Utilde: NaN, Rtilde: backend.R_phy_norm, Srel: NaN, decision: "Uncertain", reasonKey: "low-reliability" };
+    }
+  } else if (pre.event.origin === "upload") {
+    modelStatus = pre.event.backendAnalysis?.model.status ?? "UNTRAINED";
+    modelOutputAvailable = false;
+    statusReason = backendEligible
+      ? "The Python backend has not returned a model result for this uploaded event."
+      : "Counterfactual stress inputs require a separate backend inference run; no model probability was fabricated.";
+    unc.pbar = NaN; unc.U = NaN; unc.std = NaN; unc.K = 0; unc.samples = [];
+    rel = { C: NaN, Utilde: NaN, Rtilde: null, Srel: NaN, decision: "Uncertain", reasonKey: "low-reliability" };
+  }
   const t1 = typeof performance !== "undefined" ? performance.now() : Date.now();
 
   return {
@@ -89,6 +143,10 @@ export function runInference(
     latencyMs: t1 - t0,
     activeChannels,
     maskedChannels: available.filter((k) => masked.includes(k)),
+    modelStatus,
+    modelOutputAvailable,
+    source: backend ? "backend" : "illustrative-demo",
+    statusReason,
   };
 }
 

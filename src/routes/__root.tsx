@@ -81,13 +81,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Physics-Calibrated Uncertainty-Aware Transformer" },
+      { title: "Physics-Calibrated Evidential CfC" },
       {
         name: "description",
         content:
-          "Research prototype: early power-system stability assessment from PMU data with MC dropout uncertainty and PMU physics consistency.",
+          "Research prototype: early transient-stability assessment from PMU data with evidential uncertainty and PMU physics consistency.",
       },
-      { property: "og:title", content: "Physics-Calibrated Uncertainty-Aware Transformer" },
+      { property: "og:title", content: "Physics-Calibrated Evidential CfC" },
       {
         property: "og:description",
         content:

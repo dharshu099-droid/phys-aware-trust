@@ -1,11 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Download } from "lucide-react";
 import { useMemo } from "react";
 import { usePmu } from "@/lib/pmu/store";
 import { prepare, runInference } from "@/lib/pmu/inference";
-import { DecisionBadge, DemoNotice, Formula, MetricCard, PageHeader, SectionCard, fmt } from "@/components/pmu/ui";
+import { DecisionBadge, DemoNotice, Formula, MetricCard, ModelStatusNotice, PageHeader, SectionCard, fmt } from "@/components/pmu/ui";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/evaluation")({
   head: () => ({
@@ -27,7 +25,7 @@ export const Route = createFileRoute("/evaluation")({
 });
 
 function EvaluationPage() {
-  const { events, cfg } = usePmu();
+  const { events, cfg, result } = usePmu();
 
   const rows = useMemo(
     () =>
@@ -51,10 +49,12 @@ function EvaluationPage() {
         title="How This Framework Should Be Evaluated"
         description="A reliability-aware classifier cannot be summarised by accuracy alone, because it is allowed to abstain. The protocol below is the one this method requires; the table reports what the prototype actually produces on the records currently loaded, with no aggregation over data it has not seen."
       />
+      <ModelStatusNotice status={result.modelStatus} reason={result.statusReason} />
 
       <DemoNotice>
-        <strong>No experimental results are reported here.</strong> The encoder is untrained and the loaded records are
-        illustrative demo events or user uploads, so the figures below describe this session only. They are not
+        <strong>No experimental results are invented here.</strong> The loaded records may include illustrative demo events
+        or user uploads, and model metrics remain unavailable until a labelled model is trained, calibrated, and evaluated
+        by the Python backend. Session values are not
         benchmark numbers, they are not comparable to published transient-stability assessment results, and they must not
         be cited as evidence of accuracy, earliness or calibration.
       </DemoNotice>
@@ -107,59 +107,6 @@ function EvaluationPage() {
         </Table>
       </SectionCard>
 
-      <SectionCard
-        title="Downloadable evaluation graphs"
-        subtitle="Open either graph for a full-size view, or download the image and its plotted values."
-      >
-        <div className="grid gap-6 xl:grid-cols-2">
-          <article className="space-y-3">
-            <a href="/downloads/physics-inconsistency-reliability.svg" target="_blank" rel="noreferrer">
-              <img
-                src="/downloads/physics-inconsistency-reliability.svg"
-                alt="Prediction reliability decreases as the physics-inconsistency residual increases"
-                className="w-full rounded-md border bg-white"
-              />
-            </a>
-            <h3 className="text-sm font-semibold">Physics inconsistency versus prediction reliability</h3>
-            <div className="flex flex-wrap gap-2">
-              <Button asChild size="sm">
-                <a href="/downloads/physics-inconsistency-reliability.svg" download>
-                  <Download className="size-4" /> Download graph
-                </a>
-              </Button>
-              <Button asChild size="sm" variant="outline">
-                <a href="/downloads/physics-inconsistency-reliability.csv" download>
-                  <Download className="size-4" /> Download CSV
-                </a>
-              </Button>
-            </div>
-          </article>
-
-          <article className="space-y-3">
-            <a href="/downloads/evaluated-pmu-stable-unstable-behaviour.svg" target="_blank" rel="noreferrer">
-              <img
-                src="/downloads/evaluated-pmu-stable-unstable-behaviour.svg"
-                alt="Stable and unstable probabilities across 100, 200, 300 and 500 millisecond observation windows"
-                className="w-full rounded-md border bg-white"
-              />
-            </a>
-            <h3 className="text-sm font-semibold">Stable and unstable prediction behaviour</h3>
-            <div className="flex flex-wrap gap-2">
-              <Button asChild size="sm">
-                <a href="/downloads/evaluated-pmu-stable-unstable-behaviour.svg" download>
-                  <Download className="size-4" /> Download graph
-                </a>
-              </Button>
-              <Button asChild size="sm" variant="outline">
-                <a href="/downloads/evaluated-pmu-stable-unstable-behaviour.csv" download>
-                  <Download className="size-4" /> Download CSV
-                </a>
-              </Button>
-            </div>
-          </article>
-        </div>
-      </SectionCard>
-
       <SectionCard title="Metric definitions" subtitle="What a complete study must report for a model that may abstain.">
         <div className="space-y-3">
           <Formula label="Coverage: the fraction of events on which the framework commits to a decision.">
@@ -208,9 +155,9 @@ function EvaluationPage() {
             {[
               ["Classical time-domain / energy-function stability index", "Value of learning at all"],
               ["Feature-engineered classifier (SVM, gradient boosting)", "Value of sequence modelling"],
-              ["CNN or LSTM on the same PMU window", "Value of self-attention specifically"],
-              ["This Transformer, single deterministic pass", "Value of MC dropout uncertainty"],
-              ["This Transformer + uncertainty, no physics term", "Value of the physics calibration"],
+              ["CNN or LSTM on the same PMU window", "Value of CfC continuous-time dynamics"],
+              ["CfC with a conventional softmax head", "Value of evidential learning"],
+              ["Evidential CfC without the physics term", "Value of physics calibration"],
               ["Full framework with abstention disabled", "Cost of forcing a binary decision"],
             ].map(([b, w]) => (
               <TableRow key={b}>
@@ -228,11 +175,11 @@ function EvaluationPage() {
 
       <SectionCard title="Limitations of this prototype" subtitle="Stated explicitly so the demonstration is not over-read.">
         <ul className="space-y-2 text-sm text-muted-foreground">
-          <li>The encoder is deterministically initialised (seed {cfg.seed}) and has never been trained on labelled transient-stability data.</li>
+          <li>The current model status is {result.modelStatus}; no performance claim is made unless evaluation uses a held-out labelled test set.</li>
           <li>Built-in events are synthetic waveforms generated for illustration; they are not Transmission Signature Library records, archive entries or field measurements.</li>
           <li>The physics check covers one relation (phase rate versus frequency deviation) at a single observation point; it is not a state-estimation or full network consistency check.</li>
-          <li>Thresholds and calibration constants are placeholders, not values selected on validation data.</li>
-          <li>Uncertainty from MC dropout is an approximation of epistemic uncertainty and does not cover model misspecification or distribution shift across operating points.</li>
+          <li>R₀, reliability weights, and decision thresholds are accepted only from the backend calibration artifact created from labelled validation data.</li>
+          <li>Evidential uncertainty does not by itself cover every form of model misspecification or distribution shift across operating points.</li>
           <li>The system is decision support: it does not command switching, tripping or load shedding, and it is not a certified protection function.</li>
         </ul>
       </SectionCard>

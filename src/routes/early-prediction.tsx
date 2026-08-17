@@ -4,7 +4,7 @@ import { usePmu } from "@/lib/pmu/store";
 import { windowAnalysis } from "@/lib/pmu/inference";
 import { WindowSelector } from "@/components/pmu/controls";
 import { AreaTrend, SignalChart } from "@/components/pmu/charts";
-import { DecisionBadge, DemoNotice, Formula, PageHeader, SectionCard, fmt } from "@/components/pmu/ui";
+import { DecisionBadge, DemoNotice, Formula, ModelStatusNotice, PageHeader, SectionCard, fmt } from "@/components/pmu/ui";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CHANNELS } from "@/lib/pmu/types";
 
@@ -48,6 +48,7 @@ function EarlyPredictionPage() {
         title="Observation-Window Selection & Comparison"
         description="Only the early sequence following the disturbance onset is passed to the encoder. Shortening the window buys earlier warning but reduces the evidence available, which is exactly the trade-off the reliability score is designed to expose."
       />
+      <ModelStatusNotice status={result.modelStatus} reason={result.statusReason} />
 
       <SectionCard title="Observation window" subtitle="Presets plus a continuous slider; the waveform highlight updates immediately.">
         <div className="space-y-4">
