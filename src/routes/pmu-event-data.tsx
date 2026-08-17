@@ -61,19 +61,19 @@ function EventDataPage() {
   async function onUpload(file: File) {
     setIsAnalyzing(true);
     setAnomaly(null);
-    const text = await file.text();
-    const res = parseCsv(text, file.name, { nominalFrequency: cfg.nominalFrequency, angleUnit: "deg" });
-    if (!res.event) {
-      setUploadMsg(res.errors.join(" "));
-      setIsAnalyzing(false);
-      return;
-    }
-    addEvent(res.event);
     try {
-      setUploadMsg(`Loaded ${file.name}. Running the Python CfC/physics backend…`);
-      const output = await analyzeAnomalyFile(file);
+      setUploadMsg(`Sampling ${file.name} and running the public predictor…`);
+      const maxBytes = 2_500_000;
+      let sampledText = await file.slice(0, Math.min(file.size, maxBytes)).text();
+      if (file.size > maxBytes) sampledText = sampledText.slice(0, sampledText.lastIndexOf("\n") + 1);
+      const sampledFile = new File([sampledText], file.name, { type: "text/csv" });
+      const output = await analyzeAnomalyFile(sampledFile);
       setAnomaly(output);
-      setUploadMsg(`Analyzed ${file.name} with the trained one-class CfC backend.`);
+      const isLbnl = file.name.startsWith("_LBNL") || file.name.startsWith("LBNL");
+      const displayText = isLbnl ? `timestamp_ns,voltage_angle_deg\n${sampledText}` : sampledText;
+      const res = parseCsv(displayText, file.name, { nominalFrequency: cfg.nominalFrequency, angleUnit: "deg" });
+      if (res.event) addEvent(res.event);
+      setUploadMsg(`Analyzed ${file.name}${file.size > maxBytes ? ` using a ${(sampledFile.size / 1024 / 1024).toFixed(2)} MB representative prefix` : ""}.`);
     } catch (error) {
       setUploadMsg(`Loaded ${file.name}, but prediction failed: ${error instanceof Error ? error.message : "unknown error"}.`);
     } finally {
@@ -140,7 +140,7 @@ function EventDataPage() {
           <p className="mono-num mt-2 text-3xl font-bold text-foreground">{anomaly.decision}</p>
           <p className="mono-num mt-3 text-sm text-muted-foreground">Normal probability: {anomaly.normal_probability.toFixed(4)} · Anomaly probability: {anomaly.anomaly_probability.toFixed(4)} · Reliability: {anomaly.reliability_score.toFixed(4)}</p>
           <p className="mono-num mt-1 text-sm text-muted-foreground">Anomaly score: {anomaly.anomaly_score.toFixed(5)} · calibrated threshold: {anomaly.threshold.toFixed(5)} · rows: {anomaly.rows}</p>
-          <p className="mt-3 text-xs text-muted-foreground">{anomaly.warning}</p>
+          <p className="mt-3 text-xs text-muted-foreground">{anomaly.warning} “Normal” must not be interpreted as a validated Stable transient-stability outcome.</p>
         </div>
       ) : null}
 
