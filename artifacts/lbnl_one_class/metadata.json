@@ -1,0 +1,17 @@
+{
+  "status": "READY_ONE_CLASS",
+  "reference": "_LBNL_a6_bus1_L1ANG.csv",
+  "reference_rows_used": 600000,
+  "sampling_interval_ms": 8.333312,
+  "representation": "unwrapped_phase_increment_rad",
+  "mean": 0.00011507273840690215,
+  "std": 0.0005920882584557213,
+  "window_samples": 25,
+  "threshold_q95": 1.475138545036316,
+  "test_false_alarm_rate": 0.0,
+  "output_classes": [
+    "Normal",
+    "Anomalous"
+  ],
+  "warning": "Self-supervised one-class model; outputs are not transient-stability labels."
+}

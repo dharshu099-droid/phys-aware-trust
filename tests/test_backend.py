@@ -84,3 +84,15 @@ def test_fastapi_inspection_endpoint(tmp_path, monkeypatch):
     assert body["model"]["status"] == "UNTRAINED"
     assert body["inspection"]["sampling_interval_ms"] == pytest.approx(20.0)
     assert body["inspection"]["angle_unit_detected"] == "deg"
+
+
+def test_one_class_artifact_is_ready():
+    from pmu_backend.one_class import ARTIFACT_DIR, predict_csv
+
+    assert (ARTIFACT_DIR / "model.pt").exists()
+    rows = "".join(f"{1443657600000000000 + i * 8333333},{357.8 + 0.04 * i}\n" for i in range(80))
+    result = predict_csv(rows.encode(), "_LBNL_test.csv")
+    assert result["model_status"] == "READY_ONE_CLASS"
+    assert result["decision"] in {"Normal", "Anomalous"}
+    assert 0 <= result["anomaly_probability"] <= 1
+    assert 0 <= result["reliability_score"] <= 1

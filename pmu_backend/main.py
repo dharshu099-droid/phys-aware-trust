@@ -10,6 +10,7 @@ from fastapi.responses import StreamingResponse
 
 from .preprocessing import WINDOWS_MS, inspection, physics_residual, prepare_event
 from .service import calibrate, evaluate, model_status, predict, train
+from .one_class import predict_csv
 
 
 app = FastAPI(title="Physics-Calibrated Evidential CfC PMU API", version="2.0.0")
@@ -113,3 +114,11 @@ async def emulate_stream(file: Annotated[UploadFile, File()], nominal_frequency:
             yield json.dumps({"index": index, "elapsed_s": float(event.time[index]), "row": row.where(row.notna(), None).to_dict()}, default=str) + "\n"
 
     return StreamingResponse(rows(), media_type="application/x-ndjson", headers={"X-PMU-Sampling-Interval-Ms": str(event.dt * 1000)})
+
+
+@app.post("/anomaly/predict")
+async def predict_anomaly(file: Annotated[UploadFile, File()]):
+    try:
+        return predict_csv(await file.read(), file.filename or "event.csv")
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(422, str(exc)) from exc
