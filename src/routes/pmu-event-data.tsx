@@ -178,6 +178,14 @@ function EventDataPage() {
               The Python backend detects degree/radian angle units, converts to radians and unwraps phase before
               differentiation. Set nominal frequency f₀ in Advanced settings on the Reliability page to match the dataset.
             </p>
+            <div className="rounded-md border border-border bg-secondary/40 p-3">
+              <p className="text-xs font-semibold text-foreground">Download synthetic verification fixtures</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Button asChild size="sm" variant="outline"><a href="/downloads/synthetic-normal-pmu.csv" download>Normal test CSV</a></Button>
+                <Button asChild size="sm" variant="outline"><a href="/downloads/synthetic-anomalous-pmu.csv" download>Anomalous test CSV</a></Button>
+              </div>
+              <p className="mt-2 text-[11px] text-muted-foreground">These files are synthetic software checks derived from the calibrated feature ranges. They are not field measurements and must not be used as experimental results.</p>
+            </div>
           </div>
         </SectionCard>
       </div>
