@@ -31,6 +31,7 @@ export interface PmuEvent {
     eventClass: "normal" | "under-frequency" | "over-frequency";
   };
   backendAnalysis?: import("./backend").BackendAnalysis;
+  referencePrediction?: import("./backend").OneClassPrediction;
 }
 
 export interface PipelineConfig {

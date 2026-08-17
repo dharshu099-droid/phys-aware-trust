@@ -42,7 +42,7 @@ const COLORS: Record<ChannelKey, string> = {
 };
 
 function EventDataPage() {
-  const { event, pre, cfg, addEvent, result } = usePmu();
+  const { event, pre, cfg, addEvent, updateEvent, result } = usePmu();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadMsg, setUploadMsg] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -72,7 +72,11 @@ function EventDataPage() {
       const isLbnl = file.name.startsWith("_LBNL") || file.name.startsWith("LBNL");
       const displayText = isLbnl ? `timestamp_ns,voltage_angle_deg\n${sampledText}` : sampledText;
       const res = parseCsv(displayText, file.name, { nominalFrequency: cfg.nominalFrequency, angleUnit: "deg" });
-      if (res.event) addEvent(res.event);
+      if (res.event) {
+        addEvent({ ...res.event, referencePrediction: output });
+      } else {
+        updateEvent(event.id, { referencePrediction: output });
+      }
       setUploadMsg(`Analyzed ${file.name}${file.size > maxBytes ? ` using a ${(sampledFile.size / 1024 / 1024).toFixed(2)} MB representative prefix` : ""}.`);
     } catch (error) {
       setUploadMsg(`Loaded ${file.name}, but prediction failed: ${error instanceof Error ? error.message : "unknown error"}.`);
