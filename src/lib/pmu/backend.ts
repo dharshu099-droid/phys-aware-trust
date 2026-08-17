@@ -84,7 +84,7 @@ export interface OneClassPrediction {
   file: string;
   rows: number;
   angle_column: string;
-  decision: "Normal" | "Anomalous";
+  decision: "Normal" | "Anomalous" | "Uncertain";
   anomaly_probability: number;
   normal_probability: number;
   anomaly_score: number;

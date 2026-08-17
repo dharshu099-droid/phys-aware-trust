@@ -48,7 +48,11 @@ def predict(name,content):
         z=[((unwrapped[i]-unwrapped[i-1])-0.00011507273840690215)/0.0005920882584557213 for i in range(1,len(unwrapped))]
         scores=sorted(math.sqrt(sum(v*v for v in z[i:i+25])/25) for i in range(0,len(z)-24,25)); score=scores[max(0,math.ceil(.95*len(scores))-1)]
     ratio=score/THRESHOLD; probability=.5*ratio if ratio<=1 else .5+.5*(1-math.exp(-(ratio-1))); probability=max(0,min(1,probability))
-    return {"file":name,"rows":len(data_rows),"angle_column":column,"decision":"Anomalous" if score>THRESHOLD else "Normal","anomaly_probability":probability,"normal_probability":1-probability,"anomaly_score":score,"threshold":THRESHOLD,"reliability_score":min(1,2*abs(probability-.5)),"model_status":"READY_ONE_CLASS","warning":"Calibrated from the selected frequency-event PMU reference; Normal/Anomalous is not a transient-stability label."}
+    reliability=min(1,2*abs(probability-.5))
+    if probability<=.40 and reliability>=.50: decision="Normal"
+    elif probability>=.60 and reliability>=.50: decision="Anomalous"
+    else: decision="Uncertain"
+    return {"file":name,"rows":len(data_rows),"angle_column":column,"decision":decision,"anomaly_probability":probability,"normal_probability":1-probability,"anomaly_score":score,"threshold":THRESHOLD,"reliability_score":reliability,"model_status":"READY_ONE_CLASS","warning":"Calibrated from the selected frequency-event PMU reference; Normal/Anomalous is not a transient-stability label."}
 class handler(BaseHTTPRequestHandler):
     def reply(self,status,payload):
         data=json.dumps(payload).encode(); self.send_response(status); self.send_header("Content-Type","application/json"); self.send_header("Content-Length",str(len(data))); self.end_headers(); self.wfile.write(data)

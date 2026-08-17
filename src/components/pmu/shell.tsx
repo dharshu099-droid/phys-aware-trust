@@ -57,7 +57,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="mt-2 flex items-center gap-2">
             {reference ? (
               <>
-                <span className={`rounded-sm px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${reference.decision === "Normal" ? "bg-stable text-stable-foreground" : "bg-unstable text-unstable-foreground"}`}>{reference.decision}</span>
+                <span className={`rounded-sm px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${reference.decision === "Normal" ? "bg-stable text-stable-foreground" : reference.decision === "Anomalous" ? "bg-unstable text-unstable-foreground" : "bg-uncertain text-uncertain-foreground"}`}>{reference.decision}</span>
                 <span className="mono-num text-[11px] text-sidebar-foreground/75">Pₐ {reference.anomaly_probability.toFixed(2)} · R {reference.reliability_score.toFixed(2)}</span>
               </>
             ) : (

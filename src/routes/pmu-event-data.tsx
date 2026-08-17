@@ -139,7 +139,7 @@ function EventDataPage() {
       ) : null}
 
       {anomaly ? (
-        <div className={`rounded-md border-2 p-5 ${anomaly.decision === "Normal" ? "border-stable/50 bg-stable/10" : "border-unstable/50 bg-unstable/10"}`}>
+        <div className={`rounded-md border-2 p-5 ${anomaly.decision === "Normal" ? "border-stable/50 bg-stable/10" : anomaly.decision === "Anomalous" ? "border-unstable/50 bg-unstable/10" : "border-uncertain/50 bg-uncertain/10"}`}>
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Calibrated PMU reference prediction</p>
           <p className="mono-num mt-2 text-3xl font-bold text-foreground">{anomaly.decision}</p>
           <p className="mono-num mt-3 text-sm text-muted-foreground">Normal probability: {anomaly.normal_probability.toFixed(4)} · Anomaly probability: {anomaly.anomaly_probability.toFixed(4)} · Reliability: {anomaly.reliability_score.toFixed(4)}</p>
