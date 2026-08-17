@@ -7,6 +7,7 @@ import { logoutPrototype } from "./auth-gate";
 export const NAV = [
   { to: "/", label: "Overview" },
   { to: "/pmu-event-data", label: "PMU Event Data" },
+  { to: "/training-prediction", label: "Train & Predict" },
   { to: "/early-prediction", label: "Early Prediction" },
   { to: "/ai-model", label: "AI Model" },
   { to: "/uncertainty", label: "Uncertainty" },

@@ -79,3 +79,25 @@ export async function analyzePmuFile(file: File, nominalFrequency: number): Prom
   if (!response.ok) throw new Error(payload.detail ?? `Backend returned ${response.status}`);
   return payload as BackendAnalysis;
 }
+
+async function postFiles(path: string, files: File[], fields: Record<string, string | number>) {
+  const form = new FormData();
+  for (const file of files) form.append("files", file);
+  for (const [key, value] of Object.entries(fields)) form.append(key, String(value));
+  const response = await fetch(`${getPmuApiUrl()}${path}`, { method: "POST", body: form });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.detail ?? `Backend returned ${response.status}`);
+  return payload as Record<string, unknown>;
+}
+
+export function trainPmuModel(files: File[], nominalFrequency: number, windowMs: number, epochs: number) {
+  return postFiles("/train", files, { nominal_frequency: nominalFrequency, window_ms: windowMs, epochs });
+}
+
+export function calibratePmuModel(files: File[], nominalFrequency: number) {
+  return postFiles("/calibrate", files, { nominal_frequency: nominalFrequency });
+}
+
+export function evaluatePmuModel(files: File[], nominalFrequency: number) {
+  return postFiles("/evaluate", files, { nominal_frequency: nominalFrequency });
+}
