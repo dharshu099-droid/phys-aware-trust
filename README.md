@@ -5,7 +5,7 @@ The existing React frontend is connected to a FastAPI + PyTorch + `ncps` backend
 ## Run locally
 
 ```powershell
-python -m pip install -r requirements.txt
+python -m pip install -r requirements-backend.txt
 python -m uvicorn pmu_backend.main:app --host 127.0.0.1 --port 8000
 ```
 
