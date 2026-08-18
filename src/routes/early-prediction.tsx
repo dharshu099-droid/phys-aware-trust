@@ -30,6 +30,7 @@ export const Route = createFileRoute("/early-prediction")({
 function EarlyPredictionPage() {
   const { pre, cfg, result, event } = usePmu();
   const reference = event.referencePrediction;
+  const activeReference = reference?.window_predictions?.[String(cfg.windowMs)] ?? reference;
   const rows = useMemo(() => windowAnalysis(pre, cfg), [pre, cfg]);
   const trend = rows.map((r) => ({
     window: `${r.windowMs} ms`,
@@ -49,17 +50,17 @@ function EarlyPredictionPage() {
         title="Observation-Window Selection & Comparison"
         description="Only the early sequence following the disturbance onset is passed to the encoder. Shortening the window buys earlier warning but reduces the evidence available, which is exactly the trade-off the reliability score is designed to expose."
       />
-      {reference ? (
-        <div className={`rounded-md border-2 p-5 ${reference.screening_result === "Stable" ? "border-stable/50 bg-stable/10" : reference.screening_result === "Unstable" ? "border-unstable/50 bg-unstable/10" : "border-uncertain/50 bg-uncertain/10"}`}>
+      {reference && activeReference ? (
+        <div className={`rounded-md border-2 p-5 ${activeReference.screening_result === "Stable" ? "border-stable/50 bg-stable/10" : activeReference.screening_result === "Unstable" ? "border-unstable/50 bg-unstable/10" : "border-uncertain/50 bg-uncertain/10"}`}>
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Uploaded CSV — shared screening result</p>
           <div className="mt-2 flex flex-wrap items-center gap-4">
-            <p className="mono-num text-3xl font-bold">{reference.screening_result}</p>
-            <DecisionBadge decision={reference.screening_result} />
+            <p className="mono-num text-3xl font-bold">{activeReference.screening_result}</p>
+            <DecisionBadge decision={activeReference.screening_result} />
           </div>
           <p className="mono-num mt-3 text-sm text-muted-foreground">
-            P(stable proxy): {reference.normal_probability.toFixed(4)} · P(unstable proxy): {reference.anomaly_probability.toFixed(4)} · Reliability: {reference.reliability_score.toFixed(4)}
+            Window: {cfg.windowMs} ms · P(stable proxy): {activeReference.normal_probability.toFixed(4)} · P(unstable proxy): {activeReference.anomaly_probability.toFixed(4)} · Reliability: {activeReference.reliability_score.toFixed(4)}
           </p>
-          <p className="mt-2 text-sm text-muted-foreground">{reference.reason}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{activeReference.reason}</p>
         </div>
       ) : <ModelStatusNotice status={result.modelStatus} reason={result.statusReason} />}
 
@@ -122,13 +123,10 @@ function EarlyPredictionPage() {
       </SectionCard>
 
       {reference ? (
-        <SectionCard title="Observation-window model status" subtitle="The public screening model currently returns one result for the uploaded CSV as a whole.">
-          <p className="text-sm text-muted-foreground">
-            The 100, 200, 300 and 500 ms controls change the displayed PMU observation window, but this reference predictor has not produced separately calibrated predictions for those four windows. Their previous “Uncertain” values belonged to the untrained demo model and have therefore been removed.
-          </p>
+        <SectionCard title="Window comparison for the uploaded event" subtitle="Each row is calculated independently from the corresponding observation-window length.">
           <div className="mt-4 overflow-auto">
-            <Table><TableHeader><TableRow><TableHead>Analysis scope</TableHead><TableHead>Stable proxy</TableHead><TableHead>Unstable proxy</TableHead><TableHead>Reliability</TableHead><TableHead>Decision</TableHead></TableRow></TableHeader>
-              <TableBody><TableRow><TableCell className="font-semibold">Uploaded CSV ({reference.rows} rows)</TableCell><TableCell className="mono-num">{reference.normal_probability.toFixed(4)}</TableCell><TableCell className="mono-num">{reference.anomaly_probability.toFixed(4)}</TableCell><TableCell className="mono-num">{reference.reliability_score.toFixed(4)}</TableCell><TableCell><DecisionBadge decision={reference.screening_result} /></TableCell></TableRow></TableBody>
+            <Table><TableHeader><TableRow><TableHead>Window</TableHead><TableHead>Stable proxy</TableHead><TableHead>Unstable proxy</TableHead><TableHead>Reliability</TableHead><TableHead>Decision</TableHead></TableRow></TableHeader>
+              <TableBody>{Object.values(reference.window_predictions ?? {}).map((item) => <TableRow key={item.window_ms} className={item.window_ms === cfg.windowMs ? "bg-secondary/60" : undefined}><TableCell className="font-semibold">{item.window_ms} ms</TableCell><TableCell className="mono-num">{item.normal_probability.toFixed(4)}</TableCell><TableCell className="mono-num">{item.anomaly_probability.toFixed(4)}</TableCell><TableCell className="mono-num">{item.reliability_score.toFixed(4)}</TableCell><TableCell><DecisionBadge decision={item.screening_result} /></TableCell></TableRow>)}</TableBody>
             </Table>
           </div>
         </SectionCard>

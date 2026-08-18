@@ -40,6 +40,20 @@ def location(header):
     match=re.search(r"(?:mag|angle)_[vi]_(.+)$",header,re.I)
     return match.group(1) if match else None
 
+def classify(score,window_ms=None):
+    ratio=score/THRESHOLD; probability=.5*ratio if ratio<=1 else .5+.5*(1-math.exp(-(ratio-1)));probability=max(0,min(1,probability));reliability=min(1,2*abs(probability-.5))
+    if probability<=.40 and reliability>=.50:decision,screening="Normal","Stable"
+    elif probability>=.60 and reliability>=.50:decision,screening="Anomalous","Unstable"
+    else:decision,screening="Uncertain","Uncertain"
+    result={"decision":decision,"screening_result":screening,"screening_only":True,"anomaly_probability":probability,"normal_probability":1-probability,"anomaly_score":score,"reliability_score":reliability}
+    if window_ms is not None:result["window_ms"]=window_ms
+    return result
+
+def percentile_window_score(z,block,dimensions):
+    block=max(2,min(block,len(z))); scores=[]
+    for start in range(0,len(z)-block+1,block):scores.append(math.sqrt(sum(v*v for row in z[start:start+block] for v in (row if isinstance(row,list) else [row]))/(block*dimensions)))
+    scores.sort();return scores[max(0,math.ceil(.95*len(scores))-1)]
+
 def explanations(header,data,z,voltage,current,angles):
     energy=[sum(row[j]**2 for row in z)/len(z) for j in range(5)]; total=sum(energy) or 1
     contributions=[{"feature":NAMES[i],"contribution_percent":round(100*v/total,2),"deviation_score":round(math.sqrt(v),4)} for i,v in sorted(enumerate(energy),key=lambda x:x[1],reverse=True)]
@@ -99,6 +113,11 @@ def predict(name,content):
         z=[[(row[j]-MEANS[j])/STDS[j] for j in range(5)] for row in features]
         contributions,suspected,timing,windows=explanations(header,valid,z,voltage,current,angles)
         scores=sorted(score for _,score in windows); score=scores[max(0,math.ceil(.95*len(scores))-1)]
+        dt_ms=interval_ms(header,valid); window_predictions={}
+        for ms in (100,200,300,500):
+            metrics=classify(percentile_window_score(z,max(2,round(ms/dt_ms)),5),ms)
+            metrics["reason"]=f"{metrics['screening_result']} screening at {ms} ms because anomaly probability is {metrics['anomaly_probability']:.3f} and reliability is {metrics['reliability_score']:.3f}."
+            window_predictions[str(ms)]=metrics
         column="common PMU channels"; data_rows=valid
     else:
         candidates=[i for i,v in enumerate(header) if any(k in v for k in ("angle","theta","phase"))]
@@ -108,13 +127,12 @@ def predict(name,content):
         values=unwrap([math.radians(float(row[index])) for row in data_rows if len(row)>index and row[index].strip()])
         z=[((values[i]-values[i-1])-0.00011507273840690215)/0.0005920882584557213 for i in range(1,len(values))]
         scores=sorted(math.sqrt(sum(v*v for v in z[i:i+25])/25) for i in range(0,len(z)-24,25));score=scores[max(0,math.ceil(.95*len(scores))-1)]
-        contributions=[{"feature":"Voltage phase-angle change","contribution_percent":100.0,"deviation_score":round(score,4)}]
-    ratio=score/THRESHOLD; probability=.5*ratio if ratio<=1 else .5+.5*(1-math.exp(-(ratio-1)));probability=max(0,min(1,probability));reliability=min(1,2*abs(probability-.5))
-    if probability<=.40 and reliability>=.50:decision,screening="Normal","Stable"
-    elif probability>=.60 and reliability>=.50:decision,screening="Anomalous","Unstable"
-    else:decision,screening="Uncertain","Uncertain"
+        contributions=[{"feature":"Voltage phase-angle change","contribution_percent":100.0,"deviation_score":round(score,4)}];window_predictions={}
+        for ms in (100,200,300,500):
+            metrics=classify(percentile_window_score(z,max(2,round(ms/20)),1),ms);metrics["reason"]=f"{metrics['screening_result']} screening at {ms} ms because anomaly probability is {metrics['anomaly_probability']:.3f} and reliability is {metrics['reliability_score']:.3f}.";window_predictions[str(ms)]=metrics
+    base=classify(score);decision=base["decision"];screening=base["screening_result"];probability=base["anomaly_probability"];reliability=base["reliability_score"]
     top=contributions[0]["feature"] if contributions else "available PMU measurements"
-    return {"file":name,"rows":len(data_rows),"angle_column":column,"decision":decision,"screening_result":screening,"screening_only":True,"anomaly_probability":probability,"normal_probability":1-probability,"anomaly_score":score,"threshold":THRESHOLD,"reliability_score":reliability,"model_status":"READY_ONE_CLASS","reason":f"{screening} screening because anomaly probability is {probability:.3f} and reliability is {reliability:.3f}; the largest measured contribution is {top}.","feature_contributions":contributions,"suspected_pmu_location":suspected,"disturbance_timing":timing,"warning":"This is a calibrated PMU anomaly-based stability screening proxy, not a validated transient-stability classifier.","limitations":["The suspected PMU is the measurement location with the strongest relative deviation, not a confirmed physical fault location.","Detected duration describes abnormal PMU measurements, not remaining motor life or safe operating time."]}
+    return {"file":name,"rows":len(data_rows),"angle_column":column,"decision":decision,"screening_result":screening,"screening_only":True,"anomaly_probability":probability,"normal_probability":1-probability,"anomaly_score":score,"threshold":THRESHOLD,"reliability_score":reliability,"model_status":"READY_ONE_CLASS","reason":f"{screening} screening because anomaly probability is {probability:.3f} and reliability is {reliability:.3f}; the largest measured contribution is {top}.","feature_contributions":contributions,"suspected_pmu_location":suspected,"disturbance_timing":timing,"window_predictions":window_predictions,"warning":"This is a calibrated PMU anomaly-based stability screening proxy, not a validated transient-stability classifier.","limitations":["The suspected PMU is the measurement location with the strongest relative deviation, not a confirmed physical fault location.","Detected duration describes abnormal PMU measurements, not remaining motor life or safe operating time."]}
 
 class handler(BaseHTTPRequestHandler):
     def reply(self,status,payload):

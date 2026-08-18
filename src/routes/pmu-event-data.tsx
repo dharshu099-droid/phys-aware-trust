@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Slider } from "@/components/ui/slider";
 import { Badge } from "@/components/ui/badge";
 import { analyzeAnomalyFile, type OneClassPrediction } from "@/lib/pmu/backend";
+import { downloadPredictionPdf } from "@/lib/pmu/pdfReport";
 
 export const Route = createFileRoute("/pmu-event-data")({
   head: () => ({
@@ -42,12 +43,15 @@ const COLORS: Record<ChannelKey, string> = {
 };
 
 function EventDataPage() {
-  const { event, pre, cfg, addEvent, updateEvent, result } = usePmu();
+  const { event, pre, cfg, addEvent, updateEvent, removeEvent, result } = usePmu();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadMsg, setUploadMsg] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [cursor, setCursor] = useState(0);
   const [anomaly, setAnomaly] = useState<OneClassPrediction | null>(null);
+  const storedPrediction = event.referencePrediction;
+  const displayedPrediction = anomaly ?? storedPrediction ?? null;
+  const windowPrediction = displayedPrediction?.window_predictions?.[String(cfg.windowMs)] ?? displayedPrediction;
 
   const available = CHANNELS.filter((c) => event.channels[c.key]);
   const windowStart = pre.event.t[result.seq.startIdx] ?? 0;
@@ -108,7 +112,7 @@ function EventDataPage() {
         )}
       </DemoNotice>
 
-      {event.origin === "upload" && !anomaly ? (
+      {event.origin === "upload" && !displayedPrediction ? (
         <div className={`rounded-md border-2 p-5 ${result.rel.decision === "Stable" ? "border-stable/50 bg-stable/10" : result.rel.decision === "Unstable" ? "border-unstable/50 bg-unstable/10" : "border-uncertain/50 bg-uncertain/10"}`}>
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Live analysis result</p>
           <div className="mt-2 flex flex-wrap items-end gap-4">
@@ -138,22 +142,23 @@ function EventDataPage() {
         </div>
       ) : null}
 
-      {anomaly ? (
-        <div className={`rounded-md border-2 p-5 ${anomaly.screening_result === "Stable" ? "border-stable/50 bg-stable/10" : anomaly.screening_result === "Unstable" ? "border-unstable/50 bg-unstable/10" : "border-uncertain/50 bg-uncertain/10"}`}>
+      {displayedPrediction && windowPrediction ? (
+        <div className={`rounded-md border-2 p-5 ${windowPrediction.screening_result === "Stable" ? "border-stable/50 bg-stable/10" : windowPrediction.screening_result === "Unstable" ? "border-unstable/50 bg-unstable/10" : "border-uncertain/50 bg-uncertain/10"}`}>
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Explainable PMU stability screening</p>
           <div className="mt-2 flex flex-wrap items-center gap-3">
-            <p className="mono-num text-3xl font-bold text-foreground">{anomaly.screening_result}</p>
+            <p className="mono-num text-3xl font-bold text-foreground">{windowPrediction.screening_result}</p>
             <Badge variant="outline" className="rounded-sm">Screening result</Badge>
+            {windowPrediction.window_ms ? <Badge variant="outline" className="rounded-sm">{windowPrediction.window_ms} ms analysis</Badge> : null}
           </div>
-          <p className="mono-num mt-3 text-sm text-muted-foreground">Stable proxy probability: {anomaly.normal_probability.toFixed(4)} · Unstable proxy probability: {anomaly.anomaly_probability.toFixed(4)} · Reliability score: {anomaly.reliability_score.toFixed(4)}</p>
-          <p className="mono-num mt-1 text-sm text-muted-foreground">Anomaly score: {anomaly.anomaly_score.toFixed(5)} · calibrated threshold: {anomaly.threshold.toFixed(5)} · rows: {anomaly.rows}</p>
+          <p className="mono-num mt-3 text-sm text-muted-foreground">Stable proxy probability: {windowPrediction.normal_probability.toFixed(4)} · Unstable proxy probability: {windowPrediction.anomaly_probability.toFixed(4)} · Reliability score: {windowPrediction.reliability_score.toFixed(4)}</p>
+          <p className="mono-num mt-1 text-sm text-muted-foreground">Anomaly score: {windowPrediction.anomaly_score.toFixed(5)} · calibrated threshold: {displayedPrediction.threshold.toFixed(5)} · rows: {displayedPrediction.rows}</p>
           <p className="mt-3 text-sm font-medium text-foreground">Why this result</p>
-          <p className="mt-1 text-sm text-muted-foreground">{anomaly.reason}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{windowPrediction.reason}</p>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <div className="rounded-md border border-border bg-background/60 p-3">
               <p className="text-xs font-semibold uppercase tracking-[0.1em]">Explainable feature contributions</p>
               <div className="mt-2 space-y-2">
-                {anomaly.feature_contributions.map((item) => (
+                {displayedPrediction.feature_contributions.map((item) => (
                   <div key={item.feature}>
                     <div className="flex justify-between text-xs"><span>{item.feature}</span><span className="mono-num">{item.contribution_percent.toFixed(1)}%</span></div>
                     <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-secondary"><div className="h-full bg-primary" style={{ width: `${Math.max(1, item.contribution_percent)}%` }} /></div>
@@ -162,15 +167,19 @@ function EventDataPage() {
               </div>
             </div>
             <div className="rounded-md border border-border bg-background/60 p-3 text-sm">
-              <p><strong>Suspected PMU measurement location:</strong> {anomaly.suspected_pmu_location ?? "Not identifiable from CSV headers"}</p>
-              <p className="mt-2"><strong>Abnormal onset:</strong> {anomaly.disturbance_timing.detected && anomaly.disturbance_timing.onset_ms !== null ? `${anomaly.disturbance_timing.onset_ms.toFixed(1)} ms` : "No reliable onset detected"}</p>
-              <p className="mt-2"><strong>Abnormal duration:</strong> {anomaly.disturbance_timing.detected ? `${anomaly.disturbance_timing.duration_ms.toFixed(1)} ms` : "0 ms above threshold"}</p>
-              <p className="mt-2 text-xs text-muted-foreground">{anomaly.disturbance_timing.method}.</p>
+              <p><strong>Suspected PMU measurement location:</strong> {displayedPrediction.suspected_pmu_location ?? "Not identifiable from CSV headers"}</p>
+              <p className="mt-2"><strong>Abnormal onset:</strong> {displayedPrediction.disturbance_timing.detected && displayedPrediction.disturbance_timing.onset_ms !== null ? `${displayedPrediction.disturbance_timing.onset_ms.toFixed(1)} ms` : "No reliable onset detected"}</p>
+              <p className="mt-2"><strong>Abnormal duration:</strong> {displayedPrediction.disturbance_timing.detected ? `${displayedPrediction.disturbance_timing.duration_ms.toFixed(1)} ms` : "0 ms above threshold"}</p>
+              <p className="mt-2 text-xs text-muted-foreground">{displayedPrediction.disturbance_timing.method}.</p>
             </div>
           </div>
           <div className="mt-4 rounded-md border border-uncertain/40 bg-background/60 p-3 text-xs text-muted-foreground">
-            <p>{anomaly.warning}</p>
-            {anomaly.limitations.map((item) => <p className="mt-1" key={item}>• {item}</p>)}
+            <p>{displayedPrediction.warning}</p>
+            {displayedPrediction.limitations.map((item) => <p className="mt-1" key={item}>• {item}</p>)}
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => downloadPredictionPdf(event, cfg.windowMs)}>Export result as PDF</Button>
+            <Button size="sm" variant="destructive" onClick={() => { if (window.confirm(`Delete ${event.name} and its saved result?`)) { removeEvent(event.id); setAnomaly(null); } }}>Delete saved result</Button>
           </div>
         </div>
       ) : null}

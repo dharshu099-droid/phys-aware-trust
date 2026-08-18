@@ -20,6 +20,7 @@ export const NAV = [
 export function AppShell({ children }: { children: ReactNode }) {
   const { event, cfg, result } = usePmu();
   const reference = event.referencePrediction;
+  const activeReference = reference?.window_predictions?.[String(cfg.windowMs)] ?? reference;
   return (
     <div className="min-h-screen bg-background lg:flex">
       <aside className="bg-sidebar text-sidebar-foreground lg:sticky lg:top-0 lg:h-screen lg:w-72 lg:shrink-0 lg:overflow-y-auto">
@@ -55,10 +56,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             window {cfg.windowMs} ms · K = {cfg.K} · f₀ = {cfg.nominalFrequency} Hz
           </p>
           <div className="mt-2 flex items-center gap-2">
-            {reference ? (
+            {activeReference ? (
               <>
-                <span className={`rounded-sm px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${reference.screening_result === "Stable" ? "bg-stable text-stable-foreground" : reference.screening_result === "Unstable" ? "bg-unstable text-unstable-foreground" : "bg-uncertain text-uncertain-foreground"}`}>{reference.screening_result}</span>
-                <span className="mono-num text-[11px] text-sidebar-foreground/75">Pₐ {reference.anomaly_probability.toFixed(2)} · R {reference.reliability_score.toFixed(2)}</span>
+                <span className={`rounded-sm px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${activeReference.screening_result === "Stable" ? "bg-stable text-stable-foreground" : activeReference.screening_result === "Unstable" ? "bg-unstable text-unstable-foreground" : "bg-uncertain text-uncertain-foreground"}`}>{activeReference.screening_result}</span>
+                <span className="mono-num text-[11px] text-sidebar-foreground/75">Pᵤ {activeReference.anomaly_probability.toFixed(2)} · R {activeReference.reliability_score.toFixed(2)}</span>
               </>
             ) : (
               <><DecisionBadge decision={result.rel.decision} /><span className="mono-num text-[11px] text-sidebar-foreground/75">{result.modelOutputAvailable ? `Pᵤ ${result.unc.pbar.toFixed(2)} · S ${Number.isFinite(result.rel.Srel) ? result.rel.Srel.toFixed(2) : "n/a"}` : result.modelStatus}</span></>

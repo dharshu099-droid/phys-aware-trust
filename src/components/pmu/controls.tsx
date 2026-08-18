@@ -50,11 +50,11 @@ export function WindowSelector() {
       ))}
       <div className="ml-2 flex min-w-[190px] flex-1 items-center gap-3">
         <Slider
-          value={[cfg.windowMs]}
-          min={60}
-          max={600}
-          step={10}
-          onValueChange={([v]) => setCfg({ windowMs: v ?? 200 })}
+          value={[Math.max(0, WINDOWS.indexOf(cfg.windowMs as (typeof WINDOWS)[number]))]}
+          min={0}
+          max={WINDOWS.length - 1}
+          step={1}
+          onValueChange={([v]) => setCfg({ windowMs: WINDOWS[v ?? 1] ?? 200 })}
         />
         <span className="mono-num w-16 text-xs text-muted-foreground">{cfg.windowMs} ms</span>
       </div>

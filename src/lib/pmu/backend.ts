@@ -99,6 +99,8 @@ export interface OneClassPrediction {
   disturbance_timing: { detected: boolean; onset_ms: number | null; duration_ms: number; method: string };
   warning: string;
   limitations: string[];
+  window_ms?: number;
+  window_predictions?: Record<string, Omit<OneClassPrediction, "window_predictions" | "feature_contributions" | "suspected_pmu_location" | "disturbance_timing" | "limitations" | "warning" | "file" | "rows" | "angle_column" | "model_status">>;
 }
 
 export async function analyzeAnomalyFile(file: File): Promise<OneClassPrediction> {
