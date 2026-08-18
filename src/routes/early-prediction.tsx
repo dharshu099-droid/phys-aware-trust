@@ -29,6 +29,7 @@ export const Route = createFileRoute("/early-prediction")({
 
 function EarlyPredictionPage() {
   const { pre, cfg, result, event } = usePmu();
+  const reference = event.referencePrediction;
   const rows = useMemo(() => windowAnalysis(pre, cfg), [pre, cfg]);
   const trend = rows.map((r) => ({
     window: `${r.windowMs} ms`,
@@ -48,7 +49,19 @@ function EarlyPredictionPage() {
         title="Observation-Window Selection & Comparison"
         description="Only the early sequence following the disturbance onset is passed to the encoder. Shortening the window buys earlier warning but reduces the evidence available, which is exactly the trade-off the reliability score is designed to expose."
       />
-      <ModelStatusNotice status={result.modelStatus} reason={result.statusReason} />
+      {reference ? (
+        <div className={`rounded-md border-2 p-5 ${reference.screening_result === "Stable" ? "border-stable/50 bg-stable/10" : reference.screening_result === "Unstable" ? "border-unstable/50 bg-unstable/10" : "border-uncertain/50 bg-uncertain/10"}`}>
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Uploaded CSV — shared screening result</p>
+          <div className="mt-2 flex flex-wrap items-center gap-4">
+            <p className="mono-num text-3xl font-bold">{reference.screening_result}</p>
+            <DecisionBadge decision={reference.screening_result} />
+          </div>
+          <p className="mono-num mt-3 text-sm text-muted-foreground">
+            P(stable proxy): {reference.normal_probability.toFixed(4)} · P(unstable proxy): {reference.anomaly_probability.toFixed(4)} · Reliability: {reference.reliability_score.toFixed(4)}
+          </p>
+          <p className="mt-2 text-sm text-muted-foreground">{reference.reason}</p>
+        </div>
+      ) : <ModelStatusNotice status={result.modelStatus} reason={result.statusReason} />}
 
       <SectionCard title="Observation window" subtitle="Presets plus a continuous slider; the waveform highlight updates immediately.">
         <div className="space-y-4">
@@ -108,7 +121,18 @@ function EarlyPredictionPage() {
         </div>
       </SectionCard>
 
-      <SectionCard
+      {reference ? (
+        <SectionCard title="Observation-window model status" subtitle="The public screening model currently returns one result for the uploaded CSV as a whole.">
+          <p className="text-sm text-muted-foreground">
+            The 100, 200, 300 and 500 ms controls change the displayed PMU observation window, but this reference predictor has not produced separately calibrated predictions for those four windows. Their previous “Uncertain” values belonged to the untrained demo model and have therefore been removed.
+          </p>
+          <div className="mt-4 overflow-auto">
+            <Table><TableHeader><TableRow><TableHead>Analysis scope</TableHead><TableHead>Stable proxy</TableHead><TableHead>Unstable proxy</TableHead><TableHead>Reliability</TableHead><TableHead>Decision</TableHead></TableRow></TableHeader>
+              <TableBody><TableRow><TableCell className="font-semibold">Uploaded CSV ({reference.rows} rows)</TableCell><TableCell className="mono-num">{reference.normal_probability.toFixed(4)}</TableCell><TableCell className="mono-num">{reference.anomaly_probability.toFixed(4)}</TableCell><TableCell className="mono-num">{reference.reliability_score.toFixed(4)}</TableCell><TableCell><DecisionBadge decision={reference.screening_result} /></TableCell></TableRow></TableBody>
+            </Table>
+          </div>
+        </SectionCard>
+      ) : <SectionCard
         title="Window comparison for the current event"
         subtitle="Same event, same weights and same configuration; only the observation window changes."
       >
@@ -140,9 +164,9 @@ function EarlyPredictionPage() {
             ))}
           </TableBody>
         </Table>
-      </SectionCard>
+      </SectionCard>}
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      {!reference ? <div className="grid gap-4 lg:grid-cols-3">
         <SectionCard title="Window vs instability probability">
           <AreaTrend data={trend} dataKey="p" color="var(--chart-1)" />
         </SectionCard>
@@ -152,13 +176,13 @@ function EarlyPredictionPage() {
         <SectionCard title="Window vs reliability score">
           <AreaTrend data={trend} dataKey="Srel" color="var(--chart-5)" />
         </SectionCard>
-      </div>
+      </div> : null}
 
-      <DemoNotice>
+      {!reference ? <DemoNotice>
         These curves describe the behaviour of an untrained, deterministically initialised prototype on the selected
         record. They illustrate the earliness / evidence trade-off mechanism — they are not measured detection-time
         results, and no claim is made about how early instability can be detected on real systems.
-      </DemoNotice>
+      </DemoNotice> : null}
     </>
   );
 }
