@@ -85,13 +85,20 @@ export interface OneClassPrediction {
   rows: number;
   angle_column: string;
   decision: "Normal" | "Anomalous" | "Uncertain";
+  screening_result: "Stable" | "Unstable" | "Uncertain";
+  screening_only: true;
   anomaly_probability: number;
   normal_probability: number;
   anomaly_score: number;
   threshold: number;
   reliability_score: number;
   model_status: "READY_ONE_CLASS";
+  reason: string;
+  feature_contributions: { feature: string; contribution_percent: number; deviation_score: number }[];
+  suspected_pmu_location: string | null;
+  disturbance_timing: { detected: boolean; onset_ms: number | null; duration_ms: number; method: string };
   warning: string;
+  limitations: string[];
 }
 
 export async function analyzeAnomalyFile(file: File): Promise<OneClassPrediction> {
