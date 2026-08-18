@@ -34,15 +34,17 @@ const STAGES = [
 
 function ModelPage() {
   const { result, event, cfg } = usePmu();
+  const reference = event.referencePrediction;
+  const activeReference = reference?.window_predictions?.[String(cfg.windowMs)] ?? reference;
   const backend = event.backendAnalysis?.windows[String(cfg.windowMs)];
   return (
     <>
       <PageHeader
         eyebrow="AI model"
         title="Evidential CfC for Multivariate PMU Sequences"
-        description="The Python backend passes the detected and normalised PMU sequence through a Closed-form Continuous-time model and an evidential output head. Probabilities are shown only when a valid labelled model has been trained."
+        description={activeReference ? "The active public backend is a calibrated PMU anomaly-screening model. The Evidential-CfC architecture remains documented below, but it must not be presented as the source of the current screening probability." : "The Python backend passes the detected and normalised PMU sequence through a Closed-form Continuous-time model and an evidential output head. Probabilities are shown only when a valid labelled model has been trained."}
       />
-      <ModelStatusNotice status={result.modelStatus} reason={result.statusReason} />
+      {activeReference ? <div className="rounded-md border border-stable/50 bg-stable/10 px-5 py-4 text-sm"><strong>Active model: READY</strong> — calibrated anomaly screening, {cfg.windowMs} ms window. Evidential-CfC status: no labelled artifact loaded.</div> : <ModelStatusNotice status={result.modelStatus} reason={result.statusReason} />}
 
       <div className="grid gap-4 lg:grid-cols-[3fr_2fr]">
         <SectionCard title="Forward path" subtitle="Normalised PMU sequence → CfC state dynamics → evidential output">
@@ -60,9 +62,9 @@ function ModelPage() {
 
         <div className="space-y-4">
           <SectionCard title="Instability probability" subtitle="p = P(Unstable | X) for the current window">
-            {result.modelOutputAvailable ? <ProbabilityGauge p={result.unc.pbar} /> : <p className="py-12 text-center text-3xl font-semibold text-muted-foreground">N/A</p>}
+            {activeReference ? <ProbabilityGauge p={activeReference.anomaly_probability} /> : result.modelOutputAvailable ? <ProbabilityGauge p={result.unc.pbar} /> : <p className="py-12 text-center text-3xl font-semibold text-muted-foreground">N/A</p>}
             <p className="mt-2 text-xs text-muted-foreground">
-              P(Stable) = {fmt(result.modelOutputAvailable ? 1 - result.unc.pbar : null)} · P(Unstable) = {fmt(result.modelOutputAvailable ? result.unc.pbar : null)} · U_evi = {fmt(result.modelOutputAvailable ? result.unc.U : null)}.
+              P(Stable proxy) = {fmt(activeReference ? activeReference.normal_probability : result.modelOutputAvailable ? 1 - result.unc.pbar : null)} · P(Unstable proxy) = {fmt(activeReference ? activeReference.anomaly_probability : result.modelOutputAvailable ? result.unc.pbar : null)} · U_evi = {activeReference ? "not produced by screening model" : fmt(result.modelOutputAvailable ? result.unc.U : null)}.
             </p>
           </SectionCard>
           <div className="grid gap-4 sm:grid-cols-2">

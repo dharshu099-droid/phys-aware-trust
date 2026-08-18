@@ -36,6 +36,9 @@ const DECISION_MESSAGE = {
 function Overview() {
   const { event, result, cfg } = usePmu();
   const { unc, physics, rel } = result;
+  const reference = event.referencePrediction;
+  const activeReference = reference?.window_predictions?.[String(cfg.windowMs)] ?? reference;
+  const activeDecision = activeReference?.screening_result ?? rel.decision;
 
   return (
     <>
@@ -44,7 +47,7 @@ function Overview() {
         title="Physics-Calibrated Evidential CfC for Reliable Early Transient Stability Assessment"
         description="A Python CfC model and evidential head produce class probabilities and uncertainty only when valid labelled training exists. Independent PMU physics consistency and calibrated reliability determine whether the output is Stable, Unstable or Uncertain."
       />
-      <ModelStatusNotice status={result.modelStatus} reason={result.statusReason} />
+      {activeReference ? <div className="rounded-md border border-stable/50 bg-stable/10 px-5 py-4 text-sm"><strong>Active screening model: READY</strong> — result calculated for the selected {cfg.windowMs} ms window.</div> : <ModelStatusNotice status={result.modelStatus} reason={result.statusReason} />}
 
       <DemoNotice>
         <strong>Illustrative software demo.</strong> The selected record is “{event.name}”.{" "}
@@ -77,7 +80,7 @@ function Overview() {
           </div>
         </SectionCard>
         <SectionCard title="Instability probability gauge" subtitle="P(Unstable) from the evidential CfC head.">
-          {result.modelOutputAvailable ? <ProbabilityGauge p={unc.pbar} /> : <p className="py-16 text-center text-4xl font-semibold text-muted-foreground">N/A</p>}
+          {activeReference ? <ProbabilityGauge p={activeReference.anomaly_probability} /> : result.modelOutputAvailable ? <ProbabilityGauge p={unc.pbar} /> : <p className="py-16 text-center text-4xl font-semibold text-muted-foreground">N/A</p>}
           <p className="mt-1 text-center text-xs text-muted-foreground">
             near 0 → more stable · near 1 → more unstable · near 0.5 → ambiguous
           </p>
@@ -87,15 +90,15 @@ function Overview() {
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <MetricCard
           label="Instability probability"
-          value={fmt(result.modelOutputAvailable ? unc.pbar : null)}
+          value={fmt(activeReference ? activeReference.anomaly_probability : result.modelOutputAvailable ? unc.pbar : null)}
           hint="P(Unstable) = α_unstable / Σα."
           tone={unc.pbar >= cfg.tauU ? "unstable" : unc.pbar <= cfg.tauS ? "stable" : "uncertain"}
         />
         <MetricCard
-          label="Evidential uncertainty"
-          value={fmt(result.modelOutputAvailable ? unc.U : null, 5)}
-          hint="U_evi = 2 / Σα from the evidential head."
-          footer={`model ${result.modelStatus}`}
+          label={activeReference ? "Screening uncertainty" : "Evidential uncertainty"}
+          value={fmt(activeReference ? 1-activeReference.reliability_score : result.modelOutputAvailable ? unc.U : null, 5)}
+          hint={activeReference ? "1 - calibrated screening reliability." : "U_evi = 2 / Σα from the evidential head."}
+          footer={`model ${activeReference ? "READY" : result.modelStatus}`}
         />
         <MetricCard
           label="Physics residual"
@@ -106,19 +109,19 @@ function Overview() {
         />
         <MetricCard
           label="Reliability score"
-          value={fmt(rel.Srel)}
+          value={fmt(activeReference ? activeReference.reliability_score : rel.Srel)}
           hint="S_rel = C·exp(−α_rel·U_evi − β_rel·R̃_phy)."
           footer="parameters from backend calibration"
         />
         <MetricCard
           label="Final decision"
-          value={rel.decision}
-          tone={rel.decision === "Stable" ? "stable" : rel.decision === "Unstable" ? "unstable" : "uncertain"}
+          value={activeDecision}
+          tone={activeDecision === "Stable" ? "stable" : activeDecision === "Unstable" ? "unstable" : "uncertain"}
           footer={result.source === "backend" ? "Python backend output" : "illustrative browser output"}
         />
       </div>
 
-      <DecisionBanner decision={rel.decision} message={DECISION_MESSAGE[rel.decision]} />
+      <DecisionBanner decision={activeDecision} message={DECISION_MESSAGE[activeDecision]} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <SectionCard title="Main research flow" subtitle="Every stage below is implemented and inspectable.">
